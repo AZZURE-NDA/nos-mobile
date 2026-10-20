@@ -359,21 +359,20 @@ private fun DesktopFiles(s: FrontEndState, a: FrontEndActions) {
         val size by produceState<Long?>(null) { value = withContext(Dispatchers.IO) { runCatching { com.droiddeck.launcher.runtime.DesktopCatalog.desktopSize(ctx) }.getOrNull() } }
         SettingsRow(stringResource(R.string.desktop_size), size?.let { FileUtils.sizeToString(it) } ?: "…") {}
         SettingsRow(stringResource(R.string.desktop_remove_title), stringResource(R.string.desktop_remove_text)) {
-            UninstallDesktop(enabled = !s.runtimeActionsBlocked, onUninstall = a.onRemoveDesktop)
+            UninstallButton(stringResource(R.string.desktop_uninstall_title), stringResource(R.string.desktop_remove_text),
+                enabled = !s.runtimeActionsBlocked, onUninstall = a.onRemoveDesktop)
         }
     }
 }
 
 @Composable
-private fun UninstallDesktop(enabled: Boolean, onUninstall: () -> Unit) {
+internal fun UninstallButton(title: String, note: String, enabled: Boolean, modifier: Modifier = Modifier, onUninstall: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     val label = stringResource(R.string.common_uninstall)
-    val title = stringResource(R.string.desktop_uninstall_title)
-    val note = stringResource(R.string.desktop_remove_text)
     val keep = stringResource(R.string.flathub_keep)
     var at by remember { mutableStateOf<Rect?>(null) }
     Box(Modifier.onGloballyPositioned { at = it.boundsInRoot() }) {
-        SecondaryButton(label, enabled = enabled, compact = true) {
+        SecondaryButton(label, enabled = enabled, compact = true, modifier = modifier) {
             val from = at ?: return@SecondaryButton
             Steps.ask(StepAsk(
                 anchor = from, side = StepSide.Left, accent = colors.error, pillCorner = 12.dp, items = 3,

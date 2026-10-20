@@ -34,6 +34,7 @@ class App : Application() {
             com.droiddeck.launcher.core.AddonPack.PROOT.ensure(this)
             com.droiddeck.launcher.core.AddonPack.DIRECTAUDIO.ensure(this)
         }
+        com.droiddeck.launcher.runtime.VrPack.init(this)
         GpuClockPin.clearLeftover(this)
         com.droiddeck.launcher.glasses.Glasses.init(this)
         com.droiddeck.launcher.glasses.GlassesMenuMirror.initialize(this)
