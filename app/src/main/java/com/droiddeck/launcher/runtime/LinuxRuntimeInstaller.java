@@ -33,8 +33,7 @@ import java.util.concurrent.CountDownLatch;
 public final class LinuxRuntimeInstaller {
     private static final String TAG = "LinuxRuntimeInstaller";
 
-    public static final String CATALOG_URL =
-            "https://raw.githubusercontent.com/Droid-Deck/DroidDeck-Components/main/linuxfs.json";
+    public static final String CATALOG_URL = com.droiddeck.launcher.BuildConfig.RUNTIME_CATALOG_URL;
 
     private static final String VERSION_FILE = ".version";
 

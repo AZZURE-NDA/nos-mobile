@@ -1,0 +1,21 @@
+# Base system
+sudo dbus dbus-x11 dbus-user-session python3 python3-gi procps psmisc less nano file
+xz-utils zstd unzip bzip2 iproute2 iputils-ping openssh-client xdg-utils xdg-user-dirs
+desktop-file-utils shared-mime-info
+
+# KDE Plasma on Wayland, nested in the app's compositor
+plasma-desktop plasma-workspace kwin-wayland kwin-addons xwayland qt6-wayland
+konsole dolphin kate ark systemsettings kscreen breeze breeze-icon-theme
+plasma-systemmonitor kde-cli-tools kio-extras
+
+# Graphics: Zink for OpenGL, Vulkan loader for the imported Turnip KGSL driver
+libgl1-mesa-dri libegl1 libgles2 mesa-vulkan-drivers libvulkan1 vulkan-tools mesa-utils
+
+# Audio
+pipewire pipewire-pulse wireplumber pulseaudio-utils
+
+# Apps
+firefox flatpak bubblewrap
+
+# Fonts
+fonts-noto-core fonts-noto-color-emoji fonts-dejavu-core
