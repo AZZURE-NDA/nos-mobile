@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "category": "linux-runtime",
+  "release": "ubuntu-r1",
+  "name": "Linux runtime (Ubuntu 26.04 LTS + KDE Plasma)",
+  "version": "nos-ubuntu-26.04-r1",
+  "url": "https://github.com/AZZURE-NDA/nos-mobile/releases/download/ubuntu-r1/linuxfs-ubuntu.tar.zst",
+  "sha256": "d720437fdede129b47f298b16148643c3d0c3b600b3954168cce4fe48718aec4",
+  "size": 549215954,
+  "file_size": 549215954,
+  "note": "Ubuntu 26.04.1 LTS arm64 with KDE Plasma 6.6, Mesa 26.0 (Zink), Firefox from Mozilla's apt repository, Flatpak and PipeWire. No snapd."
+}

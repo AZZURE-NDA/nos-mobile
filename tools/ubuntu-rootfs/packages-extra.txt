@@ -1,0 +1,2 @@
+# Commands the app's session and desktop scripts call
+wayland-utils fontconfig util-linux gtk-update-icon-cache libglib2.0-bin

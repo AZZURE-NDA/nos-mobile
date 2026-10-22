@@ -23,6 +23,11 @@ RUN apt-get update \
  && apt-get install -y $(grep -v '^\s*#' /tmp/packages.txt | xargs) \
  && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/packages.txt
 
+COPY packages-extra.txt /tmp/packages-extra.txt
+RUN apt-get update \
+ && apt-get install -y $(grep -v '^\s*#' /tmp/packages-extra.txt | xargs) \
+ && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/packages-extra.txt
+
 COPY files/ /
 RUN chmod 0755 /opt/android-host/proot /opt/android-host/loader \
  && echo "$RUNTIME_VERSION" > /.version \
