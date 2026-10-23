@@ -375,7 +375,8 @@ object BwrapSpawner {
             clear()
             put("PROOT_LOADER", LinuxRuntime.prootLoader(context).path)
             put("PROOT_TMP_DIR", LinuxRuntime.prootTempDir(context).path)
-            if (SessionPrefs.prootNoSeccomp(context)) put("PROOT_NO_SECCOMP", "1")
+            // tar's mkdirat fails with ENOSYS under seccomp acceleration on some devices; installs need it right, not fast.
+            put("PROOT_NO_SECCOMP", "1")
             LinuxRuntime.prootLibraryPath(context).takeIf { it.isNotEmpty() }?.let { put("LD_LIBRARY_PATH", it) }
         }
         val process = builder.start()
