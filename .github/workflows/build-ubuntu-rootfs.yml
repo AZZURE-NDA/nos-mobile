@@ -1,0 +1,49 @@
+name: Build Ubuntu runtime
+
+on:
+  push:
+    paths:
+      - 'tools/ubuntu-rootfs/**'
+      - '.github/workflows/build-ubuntu-rootfs.yml'
+  workflow_dispatch:
+    inputs:
+      shell:
+        description: 'Desktop shell baked in as the default (kde or gnome)'
+        required: false
+        default: 'gnome'
+      version:
+        description: 'Runtime version written to /.version'
+        required: false
+        default: 'nos-ubuntu-26.04-r3-gnome'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the arm64 image
+        env:
+          DESKTOP_SHELL: ${{ inputs.shell || 'gnome' }}
+          RUNTIME_VERSION: ${{ inputs.version || 'nos-ubuntu-26.04-r3-gnome' }}
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq zstd >/dev/null
+          bash tools/ubuntu-rootfs/build.sh "$PWD/out"
+      - name: Check the GNOME pieces are in the image
+        if: ${{ (inputs.shell || 'gnome') == 'gnome' }}
+        run: |
+          list=$(tar --zstd -tf out/linuxfs-ubuntu.tar.zst)
+          for f in usr/bin/gnome-shell usr/libexec/mutter-devkit usr/bin/pipewire usr/bin/wireplumber \
+                   usr/local/bin/nos-gnome-session usr/share/droiddeck/desktop-shell \
+                   usr/share/gnome-shell/modes/ubuntu.json; do
+            grep -qxF -e "./$f" -e "$f" <<<"$list" || { echo "missing: $f"; exit 1; }
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linuxfs-ubuntu-${{ inputs.shell || 'gnome' }}
+          retention-days: 14
+          compression-level: 0
+          path: out/

@@ -5,7 +5,9 @@ cd "$(dirname "$0")"
 out=${1:-../../build/ubuntu-rootfs}
 mkdir -p "$out"
 tag=nos-ubuntu-rootfs:latest
-docker build --platform linux/arm64 -t "$tag" .
+args=()
+for v in RUNTIME_VERSION DESKTOP_SHELL; do [ -n "${!v:-}" ] && args+=(--build-arg "$v=${!v}"); done
+docker build --platform linux/arm64 "${args[@]}" -t "$tag" .
 cid=$(docker create --platform linux/arm64 "$tag" /bin/true)
 trap 'docker rm -f "$cid" >/dev/null' EXIT
 docker export "$cid" | zstd -T0 -19 -q -o "$out/linuxfs-ubuntu.tar.zst" -f

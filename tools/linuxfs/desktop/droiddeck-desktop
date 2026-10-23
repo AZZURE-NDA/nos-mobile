@@ -80,10 +80,17 @@ if [ "$(cat /usr/share/droiddeck/kwin-compositor 2>/dev/null)" = opengl ]; then
     export KWIN_RENDER_NODES=/dev/dri/renderD0
   fi
 fi
-echo "== droiddeck-desktop: Plasma on $WAYLAND_DISPLAY"
-dbus-run-session -- startplasma-wayland
-rc=$?
-echo "== droiddeck-desktop: Plasma ended ($rc)"
+shell=$(cat "$HOME/.config/nos-desktop-shell" /usr/share/droiddeck/desktop-shell 2>/dev/null | head -n1)
+if [ "$shell" = gnome ] && [ -x /usr/local/bin/nos-gnome-session ] && command -v gnome-shell >/dev/null 2>&1; then
+  /usr/local/bin/nos-gnome-session
+  rc=$?
+  echo "== droiddeck-desktop: GNOME ended ($rc)"
+else
+  echo "== droiddeck-desktop: Plasma on $WAYLAND_DISPLAY"
+  dbus-run-session -- startplasma-wayland
+  rc=$?
+  echo "== droiddeck-desktop: Plasma ended ($rc)"
+fi
 if [ "$rc" -eq 0 ]; then
   /usr/local/bin/droiddeck-steam-launch bigpicture
   sleep 30

@@ -1,0 +1,8 @@
+# GNOME Shell 50, shown through mutter's devkit viewer inside the app's compositor
+gnome-shell mutter-dev-bin gnome-backgrounds yaru-theme-gnome-shell
+fonts-cantarell adwaita-icon-theme gnome-control-center nautilus ptyxis
+# The viewer receives the desktop as a PipeWire screencast stream
+pipewire wireplumber
+
+# Ubuntu session mode, dock and tray for the GNOME look
+ubuntu-session gnome-shell-extension-ubuntu-dock gnome-shell-extension-appindicator

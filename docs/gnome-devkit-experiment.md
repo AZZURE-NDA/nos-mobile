@@ -8,8 +8,9 @@ GNOME Shell 50 runs and its picture shows up as an ordinary window on the host c
 It renders in software ("surfaceless renderer without GPU") and needs no logind, no GDM and no DRM.
 
 ## What it takes
-- Launch: `gnome-shell --devkit --virtual-monitor 1280x800 --no-x11`
-  with `WAYLAND_DISPLAY` pointing at the host compositor.
+- Launch: `gnome-shell --devkit` with `WAYLAND_DISPLAY` pointing at the host compositor.
+  - No `--virtual-monitor`: the viewer creates the monitor it shows. An extra one becomes the
+    primary monitor, so the top bar and dock end up on a monitor nobody sees.
   - Not `--headless --devkit`: with `--headless` the viewer is never started.
   - GNOME 50 has no `--nested`; `--devkit` replaces it.
 - Mutter starts `/usr/libexec/mutter-devkit` itself. It comes from **`mutter-dev-bin`** (not pulled
@@ -30,9 +31,20 @@ It renders in software ("surfaceless renderer without GPU") and needs no logind,
 Harmless at start: no GDM, no ibus-daemon, no evolution data server (calendar), polkit actions not
 registered, no a11y bus.
 
-## Packages (on top of the current Ubuntu runtime list)
-`gnome-shell mutter-dev-bin pipewire wireplumber fonts-cantarell adwaita-icon-theme gnome-backgrounds`
-(`yaru-theme-gnome-shell` for the Ubuntu look.)
+## In the repo (branch `exp/gnome-devkit`)
+- `tools/ubuntu-rootfs/packages-gnome.txt`, installed when the image is built with
+  `DESKTOP_SHELL=gnome` (Ubuntu session mode, Ubuntu dock, Yaru shell theme included).
+- `tools/ubuntu-rootfs/files/usr/local/bin/nos-gnome-session`: the steps above.
+- `droiddeck-desktop` starts it when `~/.config/nos-desktop-shell` or
+  `/usr/share/droiddeck/desktop-shell` says `gnome`; otherwise Plasma, as before.
+  Back to KDE on a GNOME image: `echo kde > ~/.config/nos-desktop-shell`.
+  This file is staged by the app, so it needs a new APK.
+- `.github/workflows/build-ubuntu-rootfs.yml` builds the arm64 image on GitHub's arm runner and
+  uploads it as an artifact (no release).
+
+Verified with that launcher (x86_64 chroot, root, Weston host): Ubuntu-mode GNOME with top bar,
+Ubuntu dock, app grid and overview inside the viewer. Cosmetic: a "screen is being shared" indicator
+(the viewer is a screencast) and a "logged in as a privileged user" notice (the runtime runs as root).
 
 ## Still to test
 1. The same on the Pad: arm64 Ubuntu in proot, inside the app compositor, Turnip/Zink instead of

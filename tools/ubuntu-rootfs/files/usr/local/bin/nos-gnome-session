@@ -1,0 +1,30 @@
+#!/bin/bash
+# GNOME Shell 50 has no nested mode. In --devkit mode it runs on a virtual monitor and
+# mutter starts its viewer (mutter-devkit), a Wayland client on the app's compositor that
+# shows the desktop from a PipeWire screencast stream.
+set -u
+export XDG_SESSION_TYPE=wayland XDG_CURRENT_DESKTOP=GNOME XDG_SESSION_DESKTOP=gnome DESKTOP_SESSION=gnome
+if [ -f /usr/share/gnome-shell/modes/ubuntu.json ]; then
+  export XDG_CURRENT_DESKTOP=ubuntu:GNOME XDG_SESSION_DESKTOP=ubuntu DESKTOP_SESSION=ubuntu GNOME_SHELL_SESSION_MODE=ubuntu
+fi
+export GDK_BACKEND=wayland,x11 QT_QPA_PLATFORM="wayland;xcb"
+unset KDE_FULL_SESSION KDE_SESSION_VERSION KWIN_COMPOSE QT_QUICK_BACKEND
+host_display=${WAYLAND_DISPLAY:-wayland-0}
+
+# The shell uses logind only when this directory exists; the runtime has no logind.
+rm -rf /run/systemd/seats 2>/dev/null
+
+if [ ! -S /run/dbus/system_bus_socket ]; then
+  mkdir -p /run/dbus && rm -f /run/dbus/pid
+  dbus-daemon --system --fork || echo "== gnome: no system bus; the shell will not start"
+fi
+
+[ -f /usr/share/glib-2.0/schemas/gschemas.compiled ] || glib-compile-schemas /usr/share/glib-2.0/schemas 2>/dev/null
+
+echo "== nos-gnome-session: GNOME on $host_display; the viewer sizes the monitor"
+exec dbus-run-session -- bash -c '
+  pipewire >"${BL_DEBUG_DIR:-/tmp}/gnome-pipewire.log" 2>&1 &
+  for _ in $(seq 50); do [ -S "$XDG_RUNTIME_DIR/pipewire-0" ] && break; sleep 0.1; done
+  wireplumber >"${BL_DEBUG_DIR:-/tmp}/gnome-wireplumber.log" 2>&1 &
+  WAYLAND_DISPLAY='"$host_display"' gnome-shell --devkit
+'
