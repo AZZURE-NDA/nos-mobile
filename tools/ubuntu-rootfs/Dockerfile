@@ -2,7 +2,7 @@
 FROM --platform=linux/arm64 ubuntu:26.04
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG RUNTIME_VERSION=nos-ubuntu-26.04-r1
+ARG RUNTIME_VERSION=nos-ubuntu-26.04-r2
 ARG DESKTOP_TAG=desktop-kde-r2
 
 # Snaps need systemd, which a proot session does not have.
@@ -27,6 +27,11 @@ COPY packages-extra.txt /tmp/packages-extra.txt
 RUN apt-get update \
  && apt-get install -y $(grep -v '^\s*#' /tmp/packages-extra.txt | xargs) \
  && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/packages-extra.txt
+
+COPY packages-netops.txt /tmp/packages-netops.txt
+RUN apt-get update \
+ && apt-get install -y $(grep -v '^\s*#' /tmp/packages-netops.txt | xargs) \
+ && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/packages-netops.txt
 
 COPY files/ /
 RUN chmod 0755 /opt/android-host/proot /opt/android-host/loader \

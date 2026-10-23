@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "category": "linux-runtime",
-  "release": "ubuntu-r1",
+  "release": "ubuntu-r2",
   "name": "Linux runtime (Ubuntu 26.04 LTS + KDE Plasma)",
-  "version": "nos-ubuntu-26.04-r1",
-  "url": "https://github.com/AZZURE-NDA/nos-mobile/releases/download/ubuntu-r1/linuxfs-ubuntu.tar.zst",
-  "sha256": "d720437fdede129b47f298b16148643c3d0c3b600b3954168cce4fe48718aec4",
-  "size": 549215954,
-  "file_size": 549215954,
-  "note": "Ubuntu 26.04.1 LTS arm64 with KDE Plasma 6.6, Mesa 26.0 (Zink), Firefox from Mozilla's apt repository, Flatpak and PipeWire. No snapd."
+  "version": "nos-ubuntu-26.04-r2",
+  "url": "https://github.com/AZZURE-NDA/nos-mobile/releases/download/ubuntu-r2/linuxfs-ubuntu.tar.zst",
+  "sha256": "939e0f284b9ee61a762078ad1745a1a63d2e0244397a0a2a7713851f42ba98e7",
+  "size": 618567897,
+  "file_size": 618567897,
+  "note": "Ubuntu 26.04.1 LTS arm64 with KDE Plasma 6.6, Mesa 26.0 (Zink), Firefox from Mozilla's apt repository, Flatpak and PipeWire. No snapd. r2 adds network tools and the Yaru theme."
 }
