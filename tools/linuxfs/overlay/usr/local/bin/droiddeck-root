@@ -1,0 +1,80 @@
+#!/usr/bin/python3
+"""Runs a command, or a login shell, as proot's fake root on this terminal.
+
+The desktop session runs as the app's own Android user, so dpkg and apt refuse to work there.
+The app starts a separate proot with -0 for this command, attached to the caller's terminal.
+Usage: droiddeck-root [command [args...]]
+"""
+import json
+import os
+import signal
+import socket
+import struct
+import sys
+
+SOCKET_FILE = "/etc/droiddeck/bwrap-socket"
+
+
+def socket_name():
+    name = os.environ.get("DROIDDECK_BWRAP_SOCKET", "")
+    if not name:
+        try:
+            with open(SOCKET_FILE, encoding="utf-8") as f:
+                name = f.read().strip()
+        except OSError:
+            pass
+    return "\0" + (name or "com.droiddeck.launcher.bwrap")
+
+
+def recv_exact(sock, n):
+    buf = b""
+    while len(buf) < n:
+        b = sock.recv(n - len(buf))
+        if not b:
+            return None
+        buf += b
+    return buf
+
+
+def main():
+    try:
+        tty = os.ttyname(0)
+    except OSError:
+        print("droiddeck-root: run this from a terminal", file=sys.stderr)
+        return 2
+    request = {
+        "tty": tty,
+        "argv": sys.argv[1:],
+        "cwd": os.getcwd(),
+        "term": os.environ.get("TERM", "xterm-256color"),
+    }
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        sock.connect(socket_name())
+    except OSError as e:
+        print(f"droiddeck-root: the app is not answering ({e}); this needs N-OS r5 or newer", file=sys.stderr)
+        return 2
+    body = json.dumps(request).encode()
+    sock.sendall(b"T" + struct.pack(">I", len(body)) + body)
+    # The root shell owns the terminal now; this process only waits for its exit status.
+    for sig in (signal.SIGINT, signal.SIGQUIT, signal.SIGTSTP):
+        signal.signal(sig, signal.SIG_IGN)
+    status = 1
+    while True:
+        head = recv_exact(sock, 5)
+        if head is None:
+            break
+        kind, size = head[:1], struct.unpack(">I", head[1:])[0]
+        payload = recv_exact(sock, size) if size else b""
+        if payload is None:
+            break
+        if kind == b"E":
+            print("droiddeck-root: " + payload.decode(errors="replace"), file=sys.stderr)
+        elif kind == b"X":
+            status = int(payload.decode() or "1")
+            break
+    return status
+
+
+if __name__ == "__main__":
+    sys.exit(main())
