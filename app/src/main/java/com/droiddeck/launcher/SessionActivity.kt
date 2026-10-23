@@ -1602,7 +1602,9 @@ class SessionActivity : ComponentActivity(), SurfaceHolder.Callback {
         runCatching { com.droiddeck.launcher.runtime.RuntimeInstallService.start(this, release) }
         val ok = com.droiddeck.launcher.runtime.LinuxRuntimeInstaller.install(this, release,
             progressFor(RUNTIME_LINES, release.size / 1_000_000))
-        return if (ok) null else getString(R.string.session_runtime_install_failed)
+        if (ok) return null
+        val reason = com.droiddeck.launcher.runtime.LinuxRuntimeInstaller.lastFailure()
+        return getString(R.string.session_runtime_install_failed) + (reason?.let { " ($it)" } ?: "")
     }
 
     private fun installDesktop(): String? {
