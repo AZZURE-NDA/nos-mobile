@@ -14,7 +14,7 @@ object AgentEnv {
     private const val TAG = "AgentEnv"
     private const val FILE = "agent-env.json"
     private const val GUEST_BIN = "/opt/droiddeck-agent/bin"
-    private const val BASE_PATH = "/usr/local/bin:/usr/bin:/bin"
+    private const val BASE_PATH = "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     private val NAME = Regex("[A-Za-z0-9._-]{1,64}")
     private val KEY = Regex("[A-Za-z_][A-Za-z0-9_]*")
     private val lock = Any()
