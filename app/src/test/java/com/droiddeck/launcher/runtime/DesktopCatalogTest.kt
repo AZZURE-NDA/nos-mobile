@@ -15,17 +15,13 @@ import org.robolectric.RobolectricTestRunner
 class DesktopCatalogTest {
     @get:Rule val temporary = TemporaryFolder()
 
-    @Test fun desktopNeedsTheCompleteCurrentPinnedPackage() {
+    @Test fun desktopIsTheRuntimesOwnKde() {
         val root = temporary.root
+        assertFalse(DesktopCatalog.desktopInstalled(root))
         val kwin = File(root, "usr/bin/kwin_wayland").apply {
             parentFile.mkdirs()
             writeText("fixture")
         }
-        val marker = File(root, ".droiddeck-pkg-${DesktopCatalog.DESKTOP_ID}")
-        assertFalse(DesktopCatalog.desktopInstalled(root))
-        marker.writeText("older-package")
-        assertFalse(DesktopCatalog.desktopInstalled(root))
-        marker.writeText("${BuildConfig.DESKTOP_KDE_TAG}\n")
         assertTrue(DesktopCatalog.desktopInstalled(root))
         val pending = File(root, DesktopRemoval.PENDING).apply { writeText(BuildConfig.DESKTOP_KDE_TAG) }
         assertFalse(DesktopCatalog.desktopInstalled(root))

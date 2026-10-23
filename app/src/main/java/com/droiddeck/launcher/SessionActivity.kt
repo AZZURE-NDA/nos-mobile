@@ -1608,11 +1608,9 @@ class SessionActivity : ComponentActivity(), SurfaceHolder.Callback {
     }
 
     private fun installDesktop(): String? {
-        uiHandler.post { loading.percent = -1; loading.say(getString(DESKTOP_LINES.downloading), DESKTOP_LINES.topic, readable = true) }
-        val entry = com.droiddeck.launcher.runtime.DesktopCatalog.desktopEntry(this)
-        val problem = com.droiddeck.launcher.runtime.DesktopCatalog.install(this, entry,
-            progressFor(DESKTOP_LINES, entry.size / 1_000_000))
-        return problem?.let { getString(R.string.session_desktop_install_failed, it) }
+        if (com.droiddeck.launcher.runtime.DesktopCatalog.desktopInstalled(this)) return null
+        return getString(R.string.session_desktop_install_failed,
+            "KDE is part of the Ubuntu runtime and is missing from it; reinstall the Linux runtime in Setup")
     }
 
     private fun installProton(): String? {

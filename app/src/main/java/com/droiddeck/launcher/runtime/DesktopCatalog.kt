@@ -111,10 +111,9 @@ object DesktopCatalog {
 
     fun desktopInstalled(context: Context): Boolean = desktopInstalled(LinuxRuntime.rootDir(context))
 
+    // KDE ships inside the Ubuntu runtime; upstream's Arch desktop package must never be laid over it.
     fun desktopInstalled(root: File): Boolean =
-        !File(root, DesktopRemoval.PENDING).exists() &&
-        File(root, "usr/bin/kwin_wayland").isFile &&
-            FileUtils.readString(File(root, ".droiddeck-pkg-$DESKTOP_ID"))?.trim() == BuildConfig.DESKTOP_KDE_TAG
+        !File(root, DesktopRemoval.PENDING).exists() && File(root, "usr/bin/kwin_wayland").isFile
 
     fun desktopPresent(context: Context): Boolean {
         val root = LinuxRuntime.rootDir(context)
