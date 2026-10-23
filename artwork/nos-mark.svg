@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 432 432">
+  <!-- N-OS mark: an "N" whose diagonal is a network link between two nodes.
+       Adaptive-icon foreground: content stays inside the 264px safe circle around (216,216). -->
+  <g fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="34">
+    <path d="M150 292 V140"/>
+    <path d="M282 292 V140"/>
+    <path d="M150 140 L282 292"/>
+  </g>
+  <circle cx="150" cy="140" r="27" fill="#1E9BFF" stroke="#0B0F14" stroke-width="10"/>
+  <circle cx="282" cy="292" r="27" fill="#1E9BFF" stroke="#0B0F14" stroke-width="10"/>
+</svg>
