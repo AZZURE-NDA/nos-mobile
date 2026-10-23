@@ -82,9 +82,8 @@ public final class LinuxRuntime {
     public static boolean isInstalled(Context context) {
         if (LinuxRuntimeInstaller.isRemoving() || LinuxRuntimeInstaller.hasRemovalPending(context)) return false;
         File root = rootDir(context);
-        return new File(root, "usr/bin/gamescope").isFile()
-                && (new File(root, SESSION_SCRIPT.substring(1)).isFile()
-                        || new File(root, LegacyNames.SESSION_SCRIPT.substring(1)).isFile())
+        // The Ubuntu runtime ships no gamescope or session script; the session stages its scripts at launch.
+        return new File(root, "usr/bin/bash").isFile()
                 && prootBinary(context).isFile()
                 && prootLoader(context).isFile();
     }
