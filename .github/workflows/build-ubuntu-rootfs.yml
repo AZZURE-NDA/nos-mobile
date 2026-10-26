@@ -8,13 +8,13 @@ on:
   workflow_dispatch:
     inputs:
       shell:
-        description: 'Desktop shell baked in as the default (kde or gnome)'
+        description: 'gnome installs GNOME alongside KDE (KDE stays the default shell)'
         required: false
         default: 'gnome'
       version:
         description: 'Runtime version written to /.version'
         required: false
-        default: 'nos-ubuntu-26.04-r3-gnome'
+        default: 'nos-ubuntu-26.04-r3'
 
 permissions:
   contents: read
@@ -28,7 +28,7 @@ jobs:
       - name: Build the arm64 image
         env:
           DESKTOP_SHELL: ${{ inputs.shell || 'gnome' }}
-          RUNTIME_VERSION: ${{ inputs.version || 'nos-ubuntu-26.04-r3-gnome' }}
+          RUNTIME_VERSION: ${{ inputs.version || 'nos-ubuntu-26.04-r3' }}
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq zstd >/dev/null
           bash tools/ubuntu-rootfs/build.sh "$PWD/out"
