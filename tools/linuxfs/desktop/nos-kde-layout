@@ -1,14 +1,15 @@
 #!/bin/bash
-# Puts the N-OS look on Plasma before it starts: an Ubuntu-style layout (top bar, dock on the left)
-# with Yaru icons, the Ubuntu font and an orange accent.
-# ~/.config/nos-kde-layout chooses it: "ubuntu" (default) or "classic" (Plasma's own, restored from
-# the backup taken when the N-OS layout was first applied).
+# Puts the N-OS look on Plasma before it starts, with Yaru icons, the Ubuntu font and an orange accent.
+# ~/.config/nos-kde-layout chooses the layout:
+#   atelier (default) macOS-style: menu bar on top, floating dock at the bottom, traffic-light windows
+#   ubuntu  dark top bar with the clock, dock on the left
+#   classic Plasma's own, restored from the backup taken when an N-OS layout was first applied
 set -u
-VERSION=2
-LNF=org.nos.ubuntu.desktop
+VERSION=4
+LNF=org.nos.desktop
 CONF=$HOME/.config
 mode=$(head -n1 "$CONF/nos-kde-layout" 2>/dev/null)
-[ "$mode" = classic ] || mode=ubuntu
+case $mode in ubuntu|classic) ;; *) mode=atelier ;; esac
 applied=$(cat "$CONF/nos-kde-layout-applied" 2>/dev/null)
 mkdir -p "$CONF"
 
@@ -19,10 +20,10 @@ install_files() {
 {
     "KPlugin": {
         "Authors": [{ "Name": "N-OS" }],
-        "Description": "Ubuntu-style layout for N-OS: top bar, dock on the left, Yaru icons",
-        "Id": "org.nos.ubuntu.desktop",
+        "Description": "N-OS layouts for Plasma, with Yaru icons and the N-OS wallpapers",
+        "Id": "org.nos.desktop",
         "License": "GPL-3.0-or-later",
-        "Name": "N-OS Ubuntu"
+        "Name": "N-OS"
     },
     "X-Plasma-APIVersion": "2"
 }
@@ -43,7 +44,60 @@ name=breeze-dark
 [kwinrc][org.kde.kdecoration2]
 library=org.kde.breeze
 DEFAULTS
-  cat > "$lnf/contents/layouts/org.kde.plasma.desktop-layout.js" <<'LAYOUT'
+  [ "$mode" = atelier ] && cat > "$lnf/contents/layouts/org.kde.plasma.desktop-layout.js" <<'LAYOUT'
+var desktops = desktopsForActivity(currentActivity());
+for (var i = 0; i < desktops.length; i++) {
+    desktops[i].wallpaperPlugin = "org.kde.image";
+    desktops[i].currentConfigGroup = ["Wallpaper", "org.kde.image", "General"];
+    desktops[i].writeConfig("Image", "file:///usr/share/wallpapers/N-OS-Flow");
+}
+
+var bar = new Panel;
+bar.location = "top";
+bar.floating = false;
+bar.height = 2 * Math.ceil(gridUnit * 1.5 / 2);
+var menu = bar.addWidget("org.kde.plasma.kickoff");
+menu.currentConfigGroup = ["General"];
+menu.writeConfig("icon", "/usr/share/icons/hicolor/scalable/apps/nos-mark-mono.svg");
+menu.currentConfigGroup = ["Shortcuts"];
+menu.writeConfig("global", "Alt+F1");
+bar.addWidget("org.kde.plasma.appmenu");
+bar.addWidget("org.kde.plasma.panelspacer");
+var tray = bar.addWidget("org.kde.plasma.systemtray");
+var trayId = tray.readConfig("SystrayContainmentId");
+if (trayId) {
+    var trayContainment = desktopById(trayId);
+    trayContainment.currentConfigGroup = ["General"];
+    trayContainment.writeConfig("scaleIconsToFit", true);
+}
+var clock = bar.addWidget("org.kde.plasma.digitalclock");
+clock.currentConfigGroup = ["Appearance"];
+clock.writeConfig("showDate", true);
+clock.writeConfig("dateFormat", "custom");
+clock.writeConfig("customDateFormat", "ddd d MMM");
+clock.writeConfig("dateDisplayFormat", "BesideTime");
+
+var dock = new Panel;
+dock.location = "bottom";
+dock.floating = true;
+dock.alignment = "center";
+dock.lengthMode = "fit";
+dock.height = 2 * Math.ceil(gridUnit * 3.2 / 2);
+var tasks = dock.addWidget("org.kde.plasma.icontasks");
+tasks.currentConfigGroup = ["General"];
+tasks.writeConfig("launchers", [
+    "preferred://filemanager",
+    "preferred://browser",
+    "applications:org.kde.konsole.desktop",
+    "applications:systemsettings.desktop",
+]);
+dock.addWidget("org.kde.plasma.marginsseparator");
+var apps = dock.addWidget("org.kde.plasma.kickoff");
+apps.currentConfigGroup = ["General"];
+apps.writeConfig("icon", "/usr/share/icons/hicolor/scalable/apps/nos-launchpad.svg");
+dock.addWidget("org.kde.plasma.trash");
+LAYOUT
+  [ "$mode" = ubuntu ] && cat > "$lnf/contents/layouts/org.kde.plasma.desktop-layout.js" <<'LAYOUT'
 var desktops = desktopsForActivity(currentActivity());
 for (var i = 0; i < desktops.length; i++) {
     desktops[i].wallpaperPlugin = "org.kde.image";
@@ -109,6 +163,155 @@ Type=Scalable
 Context=Applications
 THEME
   fi
+  mkdir -p /usr/share/icons/hicolor/scalable/apps /usr/share/wallpapers/N-OS-Flow/contents/images
+  cat > /usr/share/icons/hicolor/scalable/apps/nos-mark-mono.svg <<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <g fill="none" stroke="#232323" stroke-width="7" stroke-linecap="round">
+    <path d="M18 50 V16"/><path d="M46 50 V16"/><path d="M18 16 L46 50"/>
+  </g>
+  <circle cx="18" cy="16" r="6.5" fill="#232323"/><circle cx="46" cy="50" r="6.5" fill="#232323"/>
+</svg>
+SVG
+  cat > /usr/share/icons/hicolor/scalable/apps/nos-launchpad.svg <<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs><linearGradient id="t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F4F6FA"/><stop offset="1" stop-color="#D9DEE7"/></linearGradient></defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#t)"/>
+  <g>
+    <rect x="13" y="13" width="10" height="10" rx="3" fill="#FF5F6D"/><rect x="27" y="13" width="10" height="10" rx="3" fill="#FFB347"/><rect x="41" y="13" width="10" height="10" rx="3" fill="#4CD964"/>
+    <rect x="13" y="27" width="10" height="10" rx="3" fill="#34AADC"/><rect x="27" y="27" width="10" height="10" rx="3" fill="#5856D6"/><rect x="41" y="27" width="10" height="10" rx="3" fill="#FF2D92"/>
+    <rect x="13" y="41" width="10" height="10" rx="3" fill="#FFCC00"/><rect x="27" y="41" width="10" height="10" rx="3" fill="#5AC8FA"/><rect x="41" y="41" width="10" height="10" rx="3" fill="#8E8E93"/>
+  </g>
+</svg>
+SVG
+  cat > /usr/share/wallpapers/N-OS-Flow/metadata.json <<'JSON'
+{
+    "KPlugin": {
+        "Authors": [{ "Name": "N-OS" }],
+        "Id": "N-OS-Flow",
+        "License": "CC-BY-SA-4.0",
+        "Name": "N-OS Flow"
+    }
+}
+JSON
+  cat > /usr/share/wallpapers/N-OS-Flow/contents/images/2560x1600.svg <<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="1600" viewBox="0 0 2560 1600">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#DCE8FF"/><stop offset="0.5" stop-color="#B9C8F5"/><stop offset="1" stop-color="#E9D6F2"/>
+    </linearGradient>
+    <linearGradient id="w1" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#3D7BF5"/><stop offset="1" stop-color="#8A6CF0"/>
+    </linearGradient>
+    <linearGradient id="w2" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#6FA2FF"/><stop offset="1" stop-color="#C08CF2"/>
+    </linearGradient>
+    <linearGradient id="w3" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#A9C6FF"/><stop offset="1" stop-color="#F0B7E1"/>
+    </linearGradient>
+    <filter id="soft"><feGaussianBlur stdDeviation="18"/></filter>
+  </defs>
+  <rect width="2560" height="1600" fill="url(#bg)"/>
+  <g filter="url(#soft)">
+    <path d="M0 1010 C 420 860 760 1180 1220 1030 C 1680 880 2020 1100 2560 930 L2560 1600 L0 1600 Z" fill="url(#w3)" opacity="0.85"/>
+    <path d="M0 1170 C 380 1020 820 1320 1300 1170 C 1760 1030 2140 1250 2560 1110 L2560 1600 L0 1600 Z" fill="url(#w2)" opacity="0.85"/>
+    <path d="M0 1340 C 460 1210 900 1460 1380 1340 C 1840 1225 2220 1420 2560 1310 L2560 1600 L0 1600 Z" fill="url(#w1)" opacity="0.9"/>
+  </g>
+</svg>
+SVG
+  local aur=/usr/share/aurorae/themes/N-OS-Atelier
+  mkdir -p "$aur"
+  cat > "$aur/metadata.desktop" <<'DESKTOP'
+[Desktop Entry]
+Name=N-OS Atelier
+Comment=Light title bars with traffic-light buttons
+X-KDE-PluginInfo-Name=N-OS-Atelier
+X-KDE-PluginInfo-Author=N-OS
+X-KDE-PluginInfo-License=GPL-3.0-or-later
+DESKTOP
+  cat > "$aur/metadata.json" <<'JSON'
+{
+    "KPlugin": {
+        "Authors": [{ "Name": "N-OS" }],
+        "Description": "Light title bars with traffic-light buttons",
+        "Id": "N-OS-Atelier",
+        "License": "GPL-3.0-or-later",
+        "Name": "N-OS Atelier"
+    }
+}
+JSON
+  cat > "$aur/N-OS-Atelierrc" <<'RC'
+[General]
+ActiveTextColor=40,40,40
+InactiveTextColor=150,150,150
+TitleAlignment=Center
+TitleVerticalAlignment=Center
+Animation=150
+DecorationPosition=0
+ButtonWidth=14
+ButtonHeight=14
+ButtonSpacing=8
+ButtonMarginTop=0
+ExplicitButtonSpacer=10
+PaddingTop=0
+PaddingBottom=0
+PaddingLeft=0
+PaddingRight=0
+TitleEdgeTop=6
+TitleEdgeBottom=6
+TitleEdgeLeft=12
+TitleEdgeRight=12
+TitleBorderLeft=8
+TitleBorderRight=8
+TitleHeight=22
+BorderLeft=1
+BorderRight=1
+BorderBottom=1
+Shadow=true
+RC
+  cat > "$aur/decoration.svg" <<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F6F6F7"/><stop offset="1" stop-color="#ECECEE"/></linearGradient>
+    <linearGradient id="ti" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F9F9FA"/><stop offset="1" stop-color="#F3F3F4"/></linearGradient>
+  </defs>
+  <g id="decoration-topleft"><path d="M0 34 V12 A12 12 0 0 1 12 0 H12 V34 Z" fill="url(#t)"/></g>
+  <g id="decoration-top"><rect x="12" y="0" width="96" height="34" fill="url(#t)"/></g>
+  <g id="decoration-topright"><path d="M108 0 A12 12 0 0 1 120 12 V34 H108 Z" fill="url(#t)"/></g>
+  <g id="decoration-left"><rect x="0" y="34" width="1" height="74" fill="#D2D2D6"/></g>
+  <g id="decoration-center"><rect x="1" y="34" width="118" height="74" fill="#FFFFFF" fill-opacity="0"/></g>
+  <g id="decoration-right"><rect x="119" y="34" width="1" height="74" fill="#D2D2D6"/></g>
+  <g id="decoration-bottomleft"><rect x="0" y="108" width="12" height="12" fill="#D2D2D6"/></g>
+  <g id="decoration-bottom"><rect x="12" y="119" width="96" height="1" fill="#D2D2D6"/></g>
+  <g id="decoration-bottomright"><rect x="108" y="108" width="12" height="12" fill="#D2D2D6"/></g>
+  <g id="decoration-inactive-topleft"><path d="M0 34 V12 A12 12 0 0 1 12 0 H12 V34 Z" fill="url(#ti)"/></g>
+  <g id="decoration-inactive-top"><rect x="12" y="0" width="96" height="34" fill="url(#ti)"/></g>
+  <g id="decoration-inactive-topright"><path d="M108 0 A12 12 0 0 1 120 12 V34 H108 Z" fill="url(#ti)"/></g>
+  <g id="decoration-inactive-left"><rect x="0" y="34" width="1" height="74" fill="#E2E2E5"/></g>
+  <g id="decoration-inactive-center"><rect x="1" y="34" width="118" height="74" fill="#FFFFFF" fill-opacity="0"/></g>
+  <g id="decoration-inactive-right"><rect x="119" y="34" width="1" height="74" fill="#E2E2E5"/></g>
+  <g id="decoration-inactive-bottomleft"><rect x="0" y="108" width="12" height="12" fill="#E2E2E5"/></g>
+  <g id="decoration-inactive-bottom"><rect x="12" y="119" width="96" height="1" fill="#E2E2E5"/></g>
+  <g id="decoration-inactive-bottomright"><rect x="108" y="108" width="12" height="12" fill="#E2E2E5"/></g>
+</svg>
+SVG
+  local name colour glyph
+  for name in close minimize maximize restore; do
+    case $name in
+      close) colour='#FF5F57'; glyph='<path d="M8.6 8.6 L19.4 19.4 M19.4 8.6 L8.6 19.4" stroke="#7A1B12" stroke-width="2" stroke-linecap="round"/>' ;;
+      minimize) colour='#FEBC2E'; glyph='<path d="M8 14 H20" stroke="#8A5A00" stroke-width="2.2" stroke-linecap="round"/>' ;;
+      maximize) colour='#28C840'; glyph='<path d="M9 9 H16 L9 16 Z M19 19 H12 L19 12 Z" fill="#0E5A1B"/>' ;;
+      restore) colour='#28C840'; glyph='<path d="M13 13 H8 L13 8 Z M15 15 H20 L15 20 Z" fill="#0E5A1B"/>' ;;
+    esac
+    cat > "$aur/$name.svg" <<SVG
+<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 28 28">
+  <g id="active-center"><circle cx="14" cy="14" r="12" fill="$colour"/><circle cx="14" cy="14" r="11.5" fill="none" stroke="#000" stroke-opacity="0.12"/></g>
+  <g id="hover-center"><circle cx="14" cy="14" r="12" fill="$colour"/>$glyph</g>
+  <g id="pressed-center"><circle cx="14" cy="14" r="12" fill="$colour"/><circle cx="14" cy="14" r="12" fill="#000" fill-opacity="0.18"/>$glyph</g>
+  <g id="inactive-center"><circle cx="14" cy="14" r="12" fill="#D6D6D9"/><circle cx="14" cy="14" r="11.5" fill="none" stroke="#000" stroke-opacity="0.08"/></g>
+  <g id="deactivated-center"><circle cx="14" cy="14" r="12" fill="#D6D6D9"/></g>
+</svg>
+SVG
+  done
   cat > /usr/share/wallpapers/N-OS/metadata.json <<'JSON'
 {
     "KPlugin": {
@@ -148,15 +351,34 @@ JSON
 SVG
 }
 
-set_ubuntu_look() {
+set_look() {
   local font=
   fc-list 2>/dev/null | grep -q '/ubuntu/Ubuntu\[' && font=Ubuntu
   [ -n "$font" ] || fc-list 2>/dev/null | grep -qi 'Ubuntu-R\|Ubuntu:style=Regular' && font=Ubuntu
   kwriteconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage "$LNF"
   kwriteconfig6 --file kdeglobals --group General --key ColorScheme BreezeLight
-  kwriteconfig6 --file kdeglobals --group General --key AccentColor "233,84,32"
+  if [ "$mode" = atelier ]; then
+    kwriteconfig6 --file kdeglobals --group General --key AccentColor "52,120,246"
+    kwriteconfig6 --file plasmarc --group Theme --key name default
+    # The traffic-light decoration needs KWin's Aurorae engine (kwin-style-aurorae, runtime r4 and newer).
+    if ls /usr/lib/*/qt6/plugins/org.kde.kdecoration3/org.kde.kwin.aurorae.so >/dev/null 2>&1; then
+      kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key library org.kde.kwin.aurorae
+      kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key theme __aurorae__svg__N-OS-Atelier
+    else
+      kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key library org.kde.breeze
+      kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key theme Breeze
+    fi
+    kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnLeft "XIA"
+    kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight ""
+  else
+    kwriteconfig6 --file kdeglobals --group General --key AccentColor "233,84,32"
+    kwriteconfig6 --file plasmarc --group Theme --key name breeze-dark
+    kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key library org.kde.breeze
+    kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key theme Breeze
+    kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnLeft ""
+    kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight "IAX"
+  fi
   [ -d /usr/share/icons/NOS-Yaru ] && kwriteconfig6 --file kdeglobals --group Icons --key Theme NOS-Yaru
-  kwriteconfig6 --file plasmarc --group Theme --key name breeze-dark
   if [ -n "$font" ]; then
     kwriteconfig6 --file kdeglobals --group General --key font "Ubuntu,11,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
     kwriteconfig6 --file kdeglobals --group General --key menuFont "Ubuntu,11,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
@@ -164,23 +386,21 @@ set_ubuntu_look() {
     kwriteconfig6 --file kdeglobals --group General --key smallestReadableFont "Ubuntu,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
     kwriteconfig6 --file kdeglobals --group WM --key activeFont "Ubuntu,11,-1,5,700,0,0,0,0,0,0,0,0,0,0,1"
   fi
-  kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnLeft ""
-  kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight "IAX"
   [ -d /usr/share/themes/Yaru ] && kwriteconfig6 --file gtk-3.0/settings.ini --group Settings --key gtk-theme-name Yaru
   [ -d /usr/share/icons/Yaru ] && kwriteconfig6 --file gtk-3.0/settings.ini --group Settings --key gtk-icon-theme-name Yaru
 }
 
 install_files || { echo "== nos-kde-layout: cannot write the layout files"; exit 0; }
 
-if [ "$mode" = ubuntu ] && [ "$applied" != "$VERSION" ]; then
+if [ "$mode" != classic ] && [ "$applied" != "$mode:$VERSION" ]; then
   for f in plasma-org.kde.plasma.desktop-appletsrc plasmashellrc kdeglobals kwinrc plasmarc; do
     [ -f "$CONF/$f" ] && [ ! -f "$CONF/$f.pre-nos" ] && cp -p "$CONF/$f" "$CONF/$f.pre-nos"
   done
   # Plasma builds a fresh layout from the look-and-feel package only when it has no saved layout.
   rm -f "$CONF/plasma-org.kde.plasma.desktop-appletsrc" "$CONF/plasmashellrc"
-  set_ubuntu_look
-  echo "$VERSION" > "$CONF/nos-kde-layout-applied"
-  echo "== nos-kde-layout: N-OS Ubuntu layout applied (v$VERSION)"
+  set_look
+  echo "$mode:$VERSION" > "$CONF/nos-kde-layout-applied"
+  echo "== nos-kde-layout: N-OS $mode layout applied (v$VERSION)"
 elif [ "$mode" = classic ] && [ -n "$applied" ]; then
   for f in plasma-org.kde.plasma.desktop-appletsrc plasmashellrc kdeglobals kwinrc plasmarc; do
     if [ -f "$CONF/$f.pre-nos" ]; then mv -f "$CONF/$f.pre-nos" "$CONF/$f"; else rm -f "$CONF/$f"; fi

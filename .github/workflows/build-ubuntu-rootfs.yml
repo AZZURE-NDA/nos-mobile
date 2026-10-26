@@ -30,7 +30,7 @@ jobs:
       - name: Check the image has KDE and no GNOME
         run: |
           list=$(tar --zstd -tf out/linuxfs-ubuntu.tar.zst)
-          for f in usr/bin/startplasma-wayland usr/bin/kwin_wayland usr/bin/konsole; do
+          for f in usr/bin/startplasma-wayland usr/bin/kwin_wayland usr/bin/konsole usr/lib/aarch64-linux-gnu/qt6/plugins/org.kde.kdecoration3/org.kde.kwin.aurorae.so; do
             grep -qxF -e "./$f" -e "$f" <<<"$list" || { echo "missing: $f"; exit 1; }
           done
           if grep -qxF -e "./usr/bin/gnome-shell" -e "usr/bin/gnome-shell" <<<"$list"; then echo "gnome-shell is in the image"; exit 1; fi

@@ -4,7 +4,7 @@ xz-utils zstd unzip bzip2 iproute2 iputils-ping openssh-client xdg-utils xdg-use
 desktop-file-utils shared-mime-info
 
 # KDE Plasma on Wayland, nested in the app's compositor
-plasma-desktop plasma-workspace kwin-wayland kwin-addons xwayland qt6-wayland
+plasma-desktop plasma-workspace kwin-wayland kwin-addons kwin-style-aurorae xwayland qt6-wayland
 konsole dolphin kate ark systemsettings kscreen breeze breeze-icon-theme
 plasma-systemmonitor kde-cli-tools kio-extras
 
