@@ -37,7 +37,7 @@ jobs:
         run: |
           list=$(tar --zstd -tf out/linuxfs-ubuntu.tar.zst)
           for f in usr/bin/gnome-shell usr/libexec/mutter-devkit usr/bin/pipewire usr/bin/wireplumber \
-                   usr/local/bin/nos-gnome-session usr/share/droiddeck/desktop-shell \
+                   usr/share/droiddeck/desktop-shell \
                    usr/share/gnome-shell/modes/ubuntu.json; do
             grep -qxF -e "./$f" -e "$f" <<<"$list" || { echo "missing: $f"; exit 1; }
           done

@@ -18,7 +18,9 @@ It renders in software ("surfaceless renderer without GPU") and needs no logind,
 - **PipeWire + WirePlumber must run first.** The viewer receives the desktop as a PipeWire screencast
   stream; without it the viewer logs "Failed to connect pipewire context" and exits, and the shell
   exits with it.
-- **A system D-Bus must be running** (`dbus-daemon --system`). Without one the shell crashes at start
+- **A system D-Bus must be running.** On the device the stock `dbus-daemon --system` cannot start: the
+  app writes its own /etc/passwd without a `messagebus` user. The launcher starts one from the app's
+  no-user config (the same one droiddeck-session uses). Without one the shell crashes at start
   (LoginManager and TimeLimitsManager open the system bus).
 - **`/run/systemd/seats` must not exist.** The shell picks logind only when that directory exists;
   without it, it uses its built-in dummy login manager. When it exists and there is no logind, the
@@ -34,9 +36,12 @@ registered, no a11y bus.
 ## In the repo (branch `exp/gnome-devkit`)
 - `tools/ubuntu-rootfs/packages-gnome.txt`, installed when the image is built with
   `DESKTOP_SHELL=gnome` (Ubuntu session mode, Ubuntu dock, Yaru shell theme included).
-- `tools/ubuntu-rootfs/files/usr/local/bin/nos-gnome-session`: the steps above.
+- `tools/linuxfs/desktop/nos-gnome-session`: the steps above. Shipped and staged by the APK, so a
+  launcher fix needs no new runtime image.
 - `droiddeck-desktop` starts it when `~/.config/nos-desktop-shell` or
-  `/usr/share/droiddeck/desktop-shell` says `gnome`; otherwise Plasma, as before.
+  `/usr/share/droiddeck/desktop-shell` says `gnome`; otherwise Plasma, as before. When GNOME exits
+  with an error within two minutes it opens Plasma instead, so a broken GNOME never locks the user
+  out of the terminal needed to switch back.
   Back to KDE on a GNOME image: `echo kde > ~/.config/nos-desktop-shell`.
   This file is staged by the app, so it needs a new APK.
 - `.github/workflows/build-ubuntu-rootfs.yml` builds the arm64 image on GitHub's arm runner and

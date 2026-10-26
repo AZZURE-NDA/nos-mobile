@@ -81,11 +81,17 @@ if [ "$(cat /usr/share/droiddeck/kwin-compositor 2>/dev/null)" = opengl ]; then
   fi
 fi
 shell=$(cat "$HOME/.config/nos-desktop-shell" /usr/share/droiddeck/desktop-shell 2>/dev/null | head -n1)
+gnome_ran=
 if [ "$shell" = gnome ] && [ -x /usr/local/bin/nos-gnome-session ] && command -v gnome-shell >/dev/null 2>&1; then
+  gnome_ran=1
+  started=$(date +%s)
   /usr/local/bin/nos-gnome-session
   rc=$?
   echo "== droiddeck-desktop: GNOME ended ($rc)"
-else
+fi
+# A GNOME that fails at start must not cost the user the desktop, and its terminal, to switch back.
+if [ -z "$gnome_ran" ] || { [ "$rc" -ne 0 ] && [ $(( $(date +%s) - started )) -lt 120 ]; }; then
+  [ -n "$gnome_ran" ] && echo "== droiddeck-desktop: GNOME did not start; opening Plasma instead"
   echo "== droiddeck-desktop: Plasma on $WAYLAND_DISPLAY"
   dbus-run-session -- startplasma-wayland
   rc=$?

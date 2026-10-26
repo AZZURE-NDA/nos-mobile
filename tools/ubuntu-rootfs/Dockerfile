@@ -42,7 +42,7 @@ RUN if [ "$DESKTOP_SHELL" = gnome ]; then apt-get update \
  && apt-get clean && rm -rf /var/lib/apt/lists/*; fi; rm -f /tmp/packages-gnome.txt
 
 COPY files/ /
-RUN chmod 0755 /opt/android-host/proot /opt/android-host/loader /usr/local/bin/nos-gnome-session \
+RUN chmod 0755 /opt/android-host/proot /opt/android-host/loader \
  && mkdir -p /usr/share/droiddeck && echo "$DEFAULT_SHELL" > /usr/share/droiddeck/desktop-shell \
  && echo "$RUNTIME_VERSION" > /.version \
  && echo "$DESKTOP_TAG" > /.droiddeck-pkg-desktop-kde \

@@ -10,11 +10,10 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.StrokeCap
 import kotlin.math.atan2
 import kotlin.math.cos
 import kotlin.math.sin
@@ -23,50 +22,54 @@ import kotlin.math.sqrt
 @Composable
 internal fun LogoThrobber(modifier: Modifier = Modifier, running: Boolean = true) {
     val ink = MaterialTheme.colorScheme.onBackground
-    val ball = LocalPalette.current.signal
+    val node = LocalPalette.current.signal
+    val ring = MaterialTheme.colorScheme.background
     val loop = rememberInfiniteTransition(label = "throbber")
         .animateFloat(0f, 1f, infiniteRepeatable(tween(LOOP_MS, easing = LinearEasing)), label = "loop")
     val still = !running || Motion.scale == 0f
-    val left = remember { Path() }
-    val right = remember { Path() }
-    Canvas(modifier.aspectRatio(LogoShape.WIDTH / LogoShape.HEIGHT)) {
+    Canvas(modifier.aspectRatio(1f)) {
         val p = if (still) 0f else loop.value
-        val bend = when {
-            p < 0.10f -> 0f
-            p < 0.24f -> Settle.transform((p - 0.10f) / 0.14f)
-            p < 0.76f -> 1f
-            p < 0.90f -> 1f - Settle.transform((p - 0.76f) / 0.14f)
-            else -> 0f
+        val s = size.width / NosMark.SIZE
+        fun px(x: Float, y: Float) = Offset((x - NosMark.ORIGIN) * s, (y - NosMark.ORIGIN) * s)
+        val stroke = NosMark.STROKE * s
+        val a = px(NosMark.AX, NosMark.AY)
+        val b = px(NosMark.BX, NosMark.BY)
+        drawLine(ink, a, px(NosMark.AX, NosMark.BY), stroke, StrokeCap.Round)
+        drawLine(ink, px(NosMark.BX, NosMark.AY), b, stroke, StrokeCap.Round)
+        drawLine(ink, a, b, stroke, StrokeCap.Round)
+        if (!still) {
+            val t = Settle.transform(if (p < 0.5f) p * 2f else 2f - p * 2f)
+            drawCircle(node, radius = stroke * 0.42f, center = Offset(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t))
         }
-        val turn = if (p < 0.16f || p > 0.84f) 0f else Turn.transform((p - 0.16f) / 0.68f) * 360f
-        val ballScale = when {
-            p < 0.12f -> 1f
-            p < 0.30f -> 1f - 0.2f * Settle.transform((p - 0.12f) / 0.18f)
-            p < 0.70f -> 0.8f
-            p < 0.88f -> 0.8f + 0.2f * Settle.transform((p - 0.70f) / 0.18f)
-            else -> 1f
+        val pulseA = if (still) 1f else 1f - 0.12f * sin(p * 2 * Math.PI).toFloat()
+        val pulseB = if (still) 1f else 1f + 0.12f * sin(p * 2 * Math.PI).toFloat()
+        for ((c, k) in listOf(a to pulseA, b to pulseB)) {
+            drawCircle(ring, radius = (NosMark.NODE + NosMark.RING) * s * k, center = c)
+            drawCircle(node, radius = NosMark.NODE * s * k, center = c)
         }
-        val s = size.width / LogoShape.WIDTH
-        fun px(x: Float, y: Float) = Offset((x - LogoShape.LEFT) * s, y * s)
-        val centre = px(LogoShape.CX, LogoShape.CY)
-        LogoShape.left(left, bend, ::px)
-        LogoShape.right(right, ::px)
-        rotate(turn, centre) {
-            drawPath(left, ink)
-            drawPath(right, ink)
-        }
-        drawCircle(ball, radius = LogoShape.BALL * s * ballScale, center = centre)
     }
 }
 
 internal fun throbberBall(bounds: androidx.compose.ui.geometry.Rect): Pair<Offset, Float> {
-    val s = bounds.width / LogoShape.WIDTH
-    return Offset(bounds.left + (LogoShape.CX - LogoShape.LEFT) * s, bounds.top + LogoShape.CY * s) to LogoShape.BALL * s
+    val s = bounds.width / NosMark.SIZE
+    return Offset(bounds.left + (NosMark.AX - NosMark.ORIGIN) * s, bounds.top + (NosMark.AY - NosMark.ORIGIN) * s) to NosMark.NODE * s
+}
+
+/** The N-OS mark in artwork/nos-mark.svg's units, cropped to a square around the drawing. */
+private object NosMark {
+    const val ORIGIN = 108f
+    const val SIZE = 216f
+    const val AX = 150f
+    const val AY = 140f
+    const val BX = 282f
+    const val BY = 292f
+    const val STROKE = 34f
+    const val NODE = 27f
+    const val RING = 10f
 }
 
 private const val LOOP_MS = 1900
 private val Settle = CubicBezierEasing(0.5f, 0f, 0.3f, 1f)
-private val Turn = CubicBezierEasing(0.65f, 0f, 0.35f, 1f)
 
 internal object LogoShape {
     const val LEFT = -55.98f

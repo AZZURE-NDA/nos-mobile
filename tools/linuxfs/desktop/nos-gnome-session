@@ -14,9 +14,28 @@ host_display=${WAYLAND_DISPLAY:-wayland-0}
 # The shell uses logind only when this directory exists; the runtime has no logind.
 rm -rf /run/systemd/seats 2>/dev/null
 
+# The app writes its own /etc/passwd without a messagebus user, so the stock system.conf cannot start.
 if [ ! -S /run/dbus/system_bus_socket ]; then
-  mkdir -p /run/dbus && rm -f /run/dbus/pid
-  dbus-daemon --system --fork || echo "== gnome: no system bus; the shell will not start"
+  mkdir -p /run/dbus /usr/local/share/droiddeck
+  cat > /usr/local/share/droiddeck/system-bus.conf <<'BUSCONF'
+<!DOCTYPE busconfig PUBLIC "-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN"
+ "http://www.freedesktop.org/standards/dbus/1.0/busconfig.dtd">
+<busconfig>
+  <type>system</type>
+  <listen>unix:path=/run/dbus/system_bus_socket</listen>
+  <auth>EXTERNAL</auth>
+  <policy context="default">
+    <allow user="*"/>
+    <allow own="*"/>
+    <allow send_destination="*"/>
+    <allow receive_sender="*"/>
+  </policy>
+</busconfig>
+BUSCONF
+  rm -f /run/dbus/system_bus_socket /run/dbus/pid
+  dbus-daemon --config-file=/usr/local/share/droiddeck/system-bus.conf --fork --nopidfile
+  for _ in $(seq 50); do [ -S /run/dbus/system_bus_socket ] && break; sleep 0.1; done
+  [ -S /run/dbus/system_bus_socket ] || { echo "== gnome: the system bus did not come up; the shell cannot start"; exit 70; }
 fi
 
 [ -f /usr/share/glib-2.0/schemas/gschemas.compiled ] || glib-compile-schemas /usr/share/glib-2.0/schemas 2>/dev/null
