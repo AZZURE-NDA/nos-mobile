@@ -346,16 +346,17 @@ object BwrapSpawner {
         runCatching { synchronized(out) { frame(out, 'X', status.toString().toByteArray()) } }
     }
 
-    private val TERMINAL = Regex("/dev/pts/[0-9]+")
+    private fun shellQuote(arg: String): String = "'" + arg.replace("'", "'\\''") + "'"
 
     // dpkg and apt need uid 0, which only proot's -0 can pretend to; the desktop session runs without it.
+    // Android will not let the app open the caller's /dev/pts, so script(1) gives the root shell its own
+    // terminal inside the guest and its bytes travel over this socket.
     private fun rootShell(context: Context, request: JSONObject, client: LocalSocket, out: DataOutputStream, id: Int) {
-        val tty = request.getString("tty")
-        require(TERMINAL.matches(tty)) { "$tty is not a terminal" }
-        require(Os.stat(tty).st_uid == Process.myUid()) { "$tty belongs to another user" }
-        val terminal = File(tty)
         val argv = request.optJSONArray("argv")?.let { a -> List(a.length()) { a.getString(it) } }
             ?.takeIf { it.isNotEmpty() } ?: listOf("/bin/bash", "-l")
+        val rows = request.optInt("rows", 0)
+        val cols = request.optInt("cols", 0)
+        val size = if (rows > 0 && cols > 0) "stty rows $rows cols $cols 2>/dev/null; " else ""
         val root = LinuxRuntime.rootDir(context)
         val cwd = request.optString("cwd", "/root").ifEmpty { "/root" }
         val cmd = LinuxRuntime.prootPrefix(context, root, cwd, true)
@@ -364,13 +365,10 @@ object BwrapSpawner {
             "/usr/bin/env", "-i", "HOME=/root", "USER=root", "LOGNAME=root", "LANG=C.UTF-8",
             "TERM=" + request.optString("term", "xterm-256color").ifEmpty { "xterm-256color" },
             "PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
-            "XDG_RUNTIME_DIR=${LinuxRuntime.GUEST_RUNTIME_DIR}", "DEBIAN_FRONTEND=readline", "NOS_ROOT=1",
+            "XDG_RUNTIME_DIR=${LinuxRuntime.GUEST_RUNTIME_DIR}", "NOS_ROOT=1",
+            "/usr/bin/script", "-qfec", size + "exec " + argv.joinToString(" ") { shellQuote(it) }, "/dev/null",
         )
-        cmd += argv
-        val builder = ProcessBuilder(cmd).directory(root)
-            .redirectInput(ProcessBuilder.Redirect.from(terminal))
-            .redirectOutput(ProcessBuilder.Redirect.appendTo(terminal))
-            .redirectError(ProcessBuilder.Redirect.appendTo(terminal))
+        val builder = ProcessBuilder(cmd).directory(root).redirectErrorStream(true)
         builder.environment().apply {
             clear()
             put("PROOT_LOADER", LinuxRuntime.prootLoader(context).path)
@@ -382,13 +380,29 @@ object BwrapSpawner {
         val process = builder.start()
         val pid = HostProcess.pidOf(process)
         com.droiddeck.launcher.session.OrphanReaper.keep(pid)
-        Log.i(TAG, "root shell $id pid $pid on $tty: ${argv.joinToString(" ")}")
+        Log.i(TAG, "root shell $id pid $pid: ${argv.joinToString(" ")}")
         synchronized(out) { frame(out, 'P', pid.toString().toByteArray()) }
         Thread({
-            try { while (client.inputStream.read() >= 0) {   } }
-            catch (e: IOException) {   }
+            val input = DataInputStream(client.inputStream)
+            try {
+                process.outputStream.use { stdin ->
+                    while (true) {
+                        val kind = input.readUnsignedByte()
+                        val body = ByteArray(input.readInt()).also { input.readFully(it) }
+                        if (kind == 'I'.code) { stdin.write(body); stdin.flush() }
+                    }
+                }
+            } catch (e: IOException) {   }
             if (process.isAlive) process.destroy()
-        }, "root-$id-watch").apply { isDaemon = true; start() }
+        }, "root-$id-in").apply { isDaemon = true; start() }
+        val buffer = ByteArray(16384)
+        process.inputStream.use { stream ->
+            while (true) {
+                val n = try { stream.read(buffer) } catch (e: IOException) { -1 }
+                if (n < 0) break
+                try { synchronized(out) { frame(out, 'O', buffer.copyOf(n)) } } catch (e: IOException) { break }
+            }
+        }
         val status = process.waitFor()
         com.droiddeck.launcher.session.OrphanReaper.release(pid)
         Log.i(TAG, "root shell $id exited $status")

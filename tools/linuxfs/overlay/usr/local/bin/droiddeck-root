@@ -2,15 +2,19 @@
 """Runs a command, or a login shell, as proot's fake root on this terminal.
 
 The desktop session runs as the app's own Android user, so dpkg and apt refuse to work there.
-The app starts a separate proot with -0 for this command, attached to the caller's terminal.
+The app starts a separate proot with -0 whose terminal lives inside the guest; this process
+relays keystrokes and output between that terminal and the one it was started from.
 Usage: droiddeck-root [command [args...]]
 """
 import json
 import os
-import signal
+import select
+import shutil
 import socket
 import struct
 import sys
+import termios
+import tty
 
 SOCKET_FILE = "/etc/droiddeck/bwrap-socket"
 
@@ -26,53 +30,77 @@ def socket_name():
     return "\0" + (name or "com.droiddeck.launcher.bwrap")
 
 
-def recv_exact(sock, n):
-    buf = b""
-    while len(buf) < n:
-        b = sock.recv(n - len(buf))
-        if not b:
-            return None
-        buf += b
-    return buf
+def send(sock, kind, payload):
+    sock.sendall(kind + struct.pack(">I", len(payload)) + payload)
+
+
+class Frames:
+    def __init__(self):
+        self.buf = b""
+
+    def feed(self, data):
+        self.buf += data
+        while len(self.buf) >= 5:
+            size = struct.unpack(">I", self.buf[1:5])[0]
+            if len(self.buf) < 5 + size:
+                break
+            kind, payload = self.buf[:1], self.buf[5:5 + size]
+            self.buf = self.buf[5 + size:]
+            yield kind, payload
 
 
 def main():
-    try:
-        tty = os.ttyname(0)
-    except OSError:
-        print("droiddeck-root: run this from a terminal", file=sys.stderr)
-        return 2
+    interactive = os.isatty(0)
+    size = shutil.get_terminal_size((80, 24))
     request = {
-        "tty": tty,
         "argv": sys.argv[1:],
         "cwd": os.getcwd(),
         "term": os.environ.get("TERM", "xterm-256color"),
+        "rows": size.lines,
+        "cols": size.columns,
     }
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     try:
         sock.connect(socket_name())
     except OSError as e:
-        print(f"droiddeck-root: the app is not answering ({e}); this needs N-OS r5 or newer", file=sys.stderr)
+        print(f"droiddeck-root: the app is not answering ({e}); this needs N-OS r6 or newer", file=sys.stderr)
         return 2
-    body = json.dumps(request).encode()
-    sock.sendall(b"T" + struct.pack(">I", len(body)) + body)
-    # The root shell owns the terminal now; this process only waits for its exit status.
-    for sig in (signal.SIGINT, signal.SIGQUIT, signal.SIGTSTP):
-        signal.signal(sig, signal.SIG_IGN)
+    send(sock, b"T", json.dumps(request).encode())
+
+    saved = termios.tcgetattr(0) if interactive else None
+    if interactive:
+        tty.setraw(0)
     status = 1
-    while True:
-        head = recv_exact(sock, 5)
-        if head is None:
-            break
-        kind, size = head[:1], struct.unpack(">I", head[1:])[0]
-        payload = recv_exact(sock, size) if size else b""
-        if payload is None:
-            break
-        if kind == b"E":
-            print("droiddeck-root: " + payload.decode(errors="replace"), file=sys.stderr)
-        elif kind == b"X":
-            status = int(payload.decode() or "1")
-            break
+    frames = Frames()
+    stdin_open = True
+    try:
+        while True:
+            watch = [sock] + ([0] if stdin_open else [])
+            ready, _, _ = select.select(watch, [], [])
+            if 0 in ready:
+                data = os.read(0, 4096)
+                if data:
+                    send(sock, b"I", data)
+                else:
+                    stdin_open = False
+            if sock in ready:
+                data = sock.recv(65536)
+                if not data:
+                    break
+                done = False
+                for kind, payload in frames.feed(data):
+                    if kind == b"O":
+                        os.write(1, payload)
+                    elif kind == b"E":
+                        os.write(2, b"droiddeck-root: " + payload + b"\r\n")
+                    elif kind == b"X":
+                        status = int(payload.decode() or "1")
+                        done = True
+                if done:
+                    break
+    finally:
+        if saved is not None:
+            termios.tcsetattr(0, termios.TCSADRAIN, saved)
     return status
 
 
