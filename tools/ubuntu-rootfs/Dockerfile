@@ -1,12 +1,9 @@
-# Ubuntu 26.04 arm64 runtime for the app's proot session: KDE Plasma, and GNOME when built with DESKTOP_SHELL=gnome.
+# Ubuntu 26.04 arm64 runtime for the app's proot session, with KDE Plasma baked in.
 FROM --platform=linux/arm64 ubuntu:26.04
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG RUNTIME_VERSION=nos-ubuntu-26.04-r3
+ARG RUNTIME_VERSION=nos-ubuntu-26.04-r4
 ARG DESKTOP_TAG=desktop-kde-r2
-# gnome also installs GNOME; DEFAULT_SHELL is what droiddeck-desktop starts unless ~/.config/nos-desktop-shell says otherwise
-ARG DESKTOP_SHELL=kde
-ARG DEFAULT_SHELL=kde
 
 # Snaps need systemd, which a proot session does not have.
 RUN printf 'Package: snapd\nPin: release a=*\nPin-Priority: -10\n' > /etc/apt/preferences.d/no-snapd \
@@ -36,14 +33,8 @@ RUN apt-get update \
  && apt-get install -y $(grep -v '^\s*#' /tmp/packages-netops.txt | xargs) \
  && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/packages-netops.txt
 
-COPY packages-gnome.txt /tmp/packages-gnome.txt
-RUN if [ "$DESKTOP_SHELL" = gnome ]; then apt-get update \
- && apt-get install -y $(grep -v '^\s*#' /tmp/packages-gnome.txt | xargs) \
- && apt-get clean && rm -rf /var/lib/apt/lists/*; fi; rm -f /tmp/packages-gnome.txt
-
 COPY files/ /
 RUN chmod 0755 /opt/android-host/proot /opt/android-host/loader \
- && mkdir -p /usr/share/droiddeck && echo "$DEFAULT_SHELL" > /usr/share/droiddeck/desktop-shell \
  && echo "$RUNTIME_VERSION" > /.version \
  && echo "$DESKTOP_TAG" > /.droiddeck-pkg-desktop-kde \
  && ln -sf /usr/share/zoneinfo/UTC /etc/localtime \

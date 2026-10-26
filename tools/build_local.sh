@@ -149,7 +149,6 @@ docker run --rm --platform linux/amd64 \
         put tools/linuxfs/desktop/droiddeck-gpu "$d/usr/local/bin/droiddeck-gpu"
         put tools/linuxfs/desktop/droiddeck-desktop-gpu "$d/usr/local/bin/droiddeck-desktop-gpu"
         put tools/linuxfs/desktop/kwin_wayland_wrapper "$d/usr/local/bin/kwin_wayland_wrapper"
-        put tools/linuxfs/desktop/nos-gnome-session "$d/usr/local/bin/nos-gnome-session"
         put tools/linuxfs/desktop/nos-kde-layout "$d/usr/local/bin/nos-kde-layout"
         put tools/linuxfs/desktop/firefox-droiddeck.js \
             "$d/usr/lib/firefox/defaults/pref/droiddeck.js"

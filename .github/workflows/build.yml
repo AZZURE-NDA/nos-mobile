@@ -344,7 +344,6 @@ jobs:
           install -Dm644 tools/linuxfs/desktop/droiddeck-gpu "$D/usr/local/bin/droiddeck-gpu"
           install -Dm644 tools/linuxfs/desktop/droiddeck-desktop-gpu "$D/usr/local/bin/droiddeck-desktop-gpu"
           install -Dm644 tools/linuxfs/desktop/kwin_wayland_wrapper "$D/usr/local/bin/kwin_wayland_wrapper"
-          install -Dm644 tools/linuxfs/desktop/nos-gnome-session "$D/usr/local/bin/nos-gnome-session"
           install -Dm644 tools/linuxfs/desktop/nos-kde-layout "$D/usr/local/bin/nos-kde-layout"
           install -Dm644 tools/linuxfs/desktop/firefox-droiddeck.js "$D/usr/lib/firefox/defaults/pref/droiddeck.js"
           ls -lR "$D"

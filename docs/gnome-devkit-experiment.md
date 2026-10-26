@@ -1,5 +1,10 @@
 # GNOME 50 inside the app compositor (devkit route)
 
+**Status: dropped (2026-10-27).** GNOME ran on the Pad through the devkit viewer, but the viewer is a
+screencast and felt too slow for daily use. N-OS uses KDE with the Ubuntu-style layout instead
+([nos-kde-layout.md](nos-kde-layout.md)); the GNOME launcher, packages and image option were removed.
+The notes below record what it took, in case GNOME gains a nested mode again.
+
 Tested 2026-10-23 on x86_64 with an Ubuntu 26.04 (resolute) chroot: gnome-shell 50.1, mutter 50.1.
 Weston `--backend=headless` stood in for the app's compositor. Not yet tried on the Pad (arm64, proot).
 
