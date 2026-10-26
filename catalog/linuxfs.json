@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "category": "linux-runtime",
-  "release": "ubuntu-r3",
-  "name": "Linux runtime (Ubuntu 26.04 LTS + KDE Plasma + GNOME)",
-  "version": "nos-ubuntu-26.04-r3",
-  "url": "https://github.com/AZZURE-NDA/nos-mobile/releases/download/ubuntu-r3/linuxfs-ubuntu.tar.zst",
-  "sha256": "4088e85289c202c5b976df310bccb86cf4bf47218d54698cfefca059a0d5d406",
-  "size": 772451931,
-  "file_size": 772451931,
-  "note": "Ubuntu 26.04.1 LTS arm64 with KDE Plasma 6.6 (default) and GNOME 50 (Ubuntu session, dock, Yaru), Mesa 26.0 (Zink), Firefox from Mozilla's apt repository, Flatpak and PipeWire. No snapd. r3 adds GNOME; switch with: echo gnome > ~/.config/nos-desktop-shell (N-OS r5 or newer)."
+  "release": "ubuntu-r4",
+  "name": "Linux runtime (Ubuntu 26.04 LTS + KDE Plasma)",
+  "version": "nos-ubuntu-26.04-r4",
+  "url": "https://github.com/AZZURE-NDA/nos-mobile/releases/download/ubuntu-r4/linuxfs-ubuntu.tar.zst",
+  "sha256": "494b668c5cf49e39ab0b716aadd221007f065560816a73471e9e07ab6a246728",
+  "size": 618698847,
+  "file_size": 618698847,
+  "note": "Ubuntu 26.04.1 LTS arm64 with KDE Plasma 6.6, KWin's Aurorae engine for the N-OS Atelier window decoration, Mesa 26.0 (Zink), Firefox from Mozilla's apt repository, Flatpak and PipeWire. No snapd. r4 removes GNOME."
 }
