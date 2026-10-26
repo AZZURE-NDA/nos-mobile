@@ -92,6 +92,7 @@ fi
 # A GNOME that fails at start must not cost the user the desktop, and its terminal, to switch back.
 if [ -z "$gnome_ran" ] || { [ "$rc" -ne 0 ] && [ $(( $(date +%s) - started )) -lt 120 ]; }; then
   [ -n "$gnome_ran" ] && echo "== droiddeck-desktop: GNOME did not start; opening Plasma instead"
+  [ -x /usr/local/bin/nos-kde-layout ] && /usr/local/bin/nos-kde-layout
   echo "== droiddeck-desktop: Plasma on $WAYLAND_DISPLAY"
   dbus-run-session -- startplasma-wayland
   rc=$?

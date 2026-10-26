@@ -1,0 +1,191 @@
+#!/bin/bash
+# Puts the N-OS look on Plasma before it starts: an Ubuntu-style layout (top bar, dock on the left)
+# with Yaru icons, the Ubuntu font and an orange accent.
+# ~/.config/nos-kde-layout chooses it: "ubuntu" (default) or "classic" (Plasma's own, restored from
+# the backup taken when the N-OS layout was first applied).
+set -u
+VERSION=2
+LNF=org.nos.ubuntu.desktop
+CONF=$HOME/.config
+mode=$(head -n1 "$CONF/nos-kde-layout" 2>/dev/null)
+[ "$mode" = classic ] || mode=ubuntu
+applied=$(cat "$CONF/nos-kde-layout-applied" 2>/dev/null)
+mkdir -p "$CONF"
+
+install_files() {
+  local lnf=/usr/share/plasma/look-and-feel/$LNF
+  mkdir -p "$lnf/contents/layouts" /usr/share/wallpapers/N-OS/contents/images || return 1
+  cat > "$lnf/metadata.json" <<'JSON'
+{
+    "KPlugin": {
+        "Authors": [{ "Name": "N-OS" }],
+        "Description": "Ubuntu-style layout for N-OS: top bar, dock on the left, Yaru icons",
+        "Id": "org.nos.ubuntu.desktop",
+        "License": "GPL-3.0-or-later",
+        "Name": "N-OS Ubuntu"
+    },
+    "X-Plasma-APIVersion": "2"
+}
+JSON
+  cat > "$lnf/contents/defaults" <<'DEFAULTS'
+[kdeglobals][KDE]
+widgetStyle=Breeze
+
+[kdeglobals][General]
+ColorScheme=BreezeLight
+
+[kdeglobals][Icons]
+Theme=NOS-Yaru
+
+[plasmarc][Theme]
+name=breeze-dark
+
+[kwinrc][org.kde.kdecoration2]
+library=org.kde.breeze
+DEFAULTS
+  cat > "$lnf/contents/layouts/org.kde.plasma.desktop-layout.js" <<'LAYOUT'
+var desktops = desktopsForActivity(currentActivity());
+for (var i = 0; i < desktops.length; i++) {
+    desktops[i].wallpaperPlugin = "org.kde.image";
+    desktops[i].currentConfigGroup = ["Wallpaper", "org.kde.image", "General"];
+    desktops[i].writeConfig("Image", "file:///usr/share/wallpapers/N-OS");
+}
+
+var top = new Panel;
+top.location = "top";
+top.floating = false;
+top.height = 2 * Math.ceil(gridUnit * 1.6 / 2);
+top.addWidget("org.kde.plasma.pager");
+top.addWidget("org.kde.plasma.panelspacer");
+var clock = top.addWidget("org.kde.plasma.digitalclock");
+clock.currentConfigGroup = ["Appearance"];
+clock.writeConfig("showDate", true);
+clock.writeConfig("dateFormat", "custom");
+clock.writeConfig("customDateFormat", "ddd d MMM");
+clock.writeConfig("dateDisplayFormat", "BesideTime");
+top.addWidget("org.kde.plasma.panelspacer");
+var tray = top.addWidget("org.kde.plasma.systemtray");
+var trayId = tray.readConfig("SystrayContainmentId");
+if (trayId) {
+    var trayContainment = desktopById(trayId);
+    trayContainment.currentConfigGroup = ["General"];
+    trayContainment.writeConfig("scaleIconsToFit", true);
+}
+
+var dock = new Panel;
+dock.location = "left";
+dock.floating = false;
+dock.height = 2 * Math.ceil(gridUnit * 3.2 / 2);
+var tasks = dock.addWidget("org.kde.plasma.icontasks");
+tasks.currentConfigGroup = ["General"];
+tasks.writeConfig("launchers", [
+    "preferred://browser",
+    "preferred://filemanager",
+    "applications:org.kde.konsole.desktop",
+    "applications:systemsettings.desktop",
+]);
+tasks.writeConfig("iconSpacing", 2);
+dock.addWidget("org.kde.plasma.panelspacer");
+var apps = dock.addWidget("org.kde.plasma.kickoff");
+apps.currentConfigGroup = ["General"];
+apps.writeConfig("icon", "view-app-grid-symbolic");
+apps.currentConfigGroup = ["Shortcuts"];
+apps.writeConfig("global", "Alt+F1");
+LAYOUT
+  if [ -d /usr/share/icons/Yaru ]; then
+    mkdir -p /usr/share/icons/NOS-Yaru/scalable/apps
+    cat > /usr/share/icons/NOS-Yaru/index.theme <<'THEME'
+[Icon Theme]
+Name=N-OS Yaru
+Comment=Yaru, with Breeze for the KDE icons Yaru lacks
+Inherits=Yaru,breeze,hicolor
+Directories=scalable/apps
+
+[scalable/apps]
+Size=48
+MinSize=8
+MaxSize=512
+Type=Scalable
+Context=Applications
+THEME
+  fi
+  cat > /usr/share/wallpapers/N-OS/metadata.json <<'JSON'
+{
+    "KPlugin": {
+        "Authors": [{ "Name": "N-OS" }],
+        "Id": "N-OS",
+        "License": "CC-BY-SA-4.0",
+        "Name": "N-OS"
+    }
+}
+JSON
+  cat > /usr/share/wallpapers/N-OS/contents/images/2560x1600.svg <<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" width="2560" height="1600" viewBox="0 0 2560 1600">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2C0B26"/>
+      <stop offset="0.55" stop-color="#77216F"/>
+      <stop offset="1" stop-color="#E95420"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.78" cy="0.82" r="0.6">
+      <stop offset="0" stop-color="#FF8A3D" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#FF8A3D" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="2560" height="1600" fill="url(#sky)"/>
+  <rect width="2560" height="1600" fill="url(#glow)"/>
+  <g stroke="#FFFFFF" stroke-opacity="0.10" stroke-width="3" fill="none">
+    <path d="M300 1250 L760 900 L1180 1080 L1640 640 L2120 820 L2420 420"/>
+    <path d="M760 900 L980 520 L1640 640"/>
+    <path d="M1180 1080 L1500 1360 L2120 820"/>
+  </g>
+  <g fill="#FFFFFF" fill-opacity="0.16">
+    <circle cx="300" cy="1250" r="10"/><circle cx="760" cy="900" r="14"/><circle cx="980" cy="520" r="9"/>
+    <circle cx="1180" cy="1080" r="12"/><circle cx="1500" cy="1360" r="9"/><circle cx="1640" cy="640" r="16"/>
+    <circle cx="2120" cy="820" r="12"/><circle cx="2420" cy="420" r="10"/>
+  </g>
+</svg>
+SVG
+}
+
+set_ubuntu_look() {
+  local font=
+  fc-list 2>/dev/null | grep -q '/ubuntu/Ubuntu\[' && font=Ubuntu
+  [ -n "$font" ] || fc-list 2>/dev/null | grep -qi 'Ubuntu-R\|Ubuntu:style=Regular' && font=Ubuntu
+  kwriteconfig6 --file kdeglobals --group KDE --key LookAndFeelPackage "$LNF"
+  kwriteconfig6 --file kdeglobals --group General --key ColorScheme BreezeLight
+  kwriteconfig6 --file kdeglobals --group General --key AccentColor "233,84,32"
+  [ -d /usr/share/icons/NOS-Yaru ] && kwriteconfig6 --file kdeglobals --group Icons --key Theme NOS-Yaru
+  kwriteconfig6 --file plasmarc --group Theme --key name breeze-dark
+  if [ -n "$font" ]; then
+    kwriteconfig6 --file kdeglobals --group General --key font "Ubuntu,11,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    kwriteconfig6 --file kdeglobals --group General --key menuFont "Ubuntu,11,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    kwriteconfig6 --file kdeglobals --group General --key toolBarFont "Ubuntu,10,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    kwriteconfig6 --file kdeglobals --group General --key smallestReadableFont "Ubuntu,9,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
+    kwriteconfig6 --file kdeglobals --group WM --key activeFont "Ubuntu,11,-1,5,700,0,0,0,0,0,0,0,0,0,0,1"
+  fi
+  kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnLeft ""
+  kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight "IAX"
+  [ -d /usr/share/themes/Yaru ] && kwriteconfig6 --file gtk-3.0/settings.ini --group Settings --key gtk-theme-name Yaru
+  [ -d /usr/share/icons/Yaru ] && kwriteconfig6 --file gtk-3.0/settings.ini --group Settings --key gtk-icon-theme-name Yaru
+}
+
+install_files || { echo "== nos-kde-layout: cannot write the layout files"; exit 0; }
+
+if [ "$mode" = ubuntu ] && [ "$applied" != "$VERSION" ]; then
+  for f in plasma-org.kde.plasma.desktop-appletsrc plasmashellrc kdeglobals kwinrc plasmarc; do
+    [ -f "$CONF/$f" ] && [ ! -f "$CONF/$f.pre-nos" ] && cp -p "$CONF/$f" "$CONF/$f.pre-nos"
+  done
+  # Plasma builds a fresh layout from the look-and-feel package only when it has no saved layout.
+  rm -f "$CONF/plasma-org.kde.plasma.desktop-appletsrc" "$CONF/plasmashellrc"
+  set_ubuntu_look
+  echo "$VERSION" > "$CONF/nos-kde-layout-applied"
+  echo "== nos-kde-layout: N-OS Ubuntu layout applied (v$VERSION)"
+elif [ "$mode" = classic ] && [ -n "$applied" ]; then
+  for f in plasma-org.kde.plasma.desktop-appletsrc plasmashellrc kdeglobals kwinrc plasmarc; do
+    if [ -f "$CONF/$f.pre-nos" ]; then mv -f "$CONF/$f.pre-nos" "$CONF/$f"; else rm -f "$CONF/$f"; fi
+  done
+  rm -f "$CONF/nos-kde-layout-applied"
+  echo "== nos-kde-layout: Plasma's own layout restored"
+fi
+exit 0

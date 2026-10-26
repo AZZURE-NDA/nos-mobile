@@ -27,6 +27,7 @@ object SessionFiles {
         "usr/local/bin/droiddeck-desktop-window-rules" to "usr/local/bin/droiddeck-desktop-window-rules",
         "usr/local/bin/kwin_wayland_wrapper" to "usr/local/bin/kwin_wayland_wrapper",
         "usr/local/bin/nos-gnome-session" to "usr/local/bin/nos-gnome-session",
+        "usr/local/bin/nos-kde-layout" to "usr/local/bin/nos-kde-layout",
         "usr/lib/firefox/defaults/pref/droiddeck.js" to "usr/lib/firefox/defaults/pref/droiddeck.js",
         "etc/xdg/autostart/droiddeck-clipboard.desktop" to "etc/xdg/autostart/droiddeck-clipboard.desktop",
     )

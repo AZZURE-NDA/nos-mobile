@@ -23,7 +23,7 @@ def source_assets(overlay=OVERLAY):
     result = {source: 'assets/linuxfs/' + source.relative_to(overlay).as_posix() for source in sources}
     if overlay == OVERLAY:
         desktop = overlay.parent / 'desktop'
-        for name in ['droiddeck-desktop', 'droiddeck-gpu', 'droiddeck-desktop-gpu', 'kwin_wayland_wrapper', 'nos-gnome-session']:
+        for name in ['droiddeck-desktop', 'droiddeck-gpu', 'droiddeck-desktop-gpu', 'kwin_wayland_wrapper', 'nos-gnome-session', 'nos-kde-layout']:
             result[desktop / name] = 'assets/linuxfs/usr/local/bin/' + name
         result[desktop / 'firefox-droiddeck.js'] = 'assets/linuxfs/usr/lib/firefox/defaults/pref/droiddeck.js'
         result[desktop / 'droiddeck-clipboard.desktop'] = 'assets/linuxfs/etc/xdg/autostart/droiddeck-clipboard.desktop'
