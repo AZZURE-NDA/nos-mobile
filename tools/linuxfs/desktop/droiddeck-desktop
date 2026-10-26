@@ -97,8 +97,4 @@ if [ -z "$gnome_ran" ] || { [ "$rc" -ne 0 ] && [ $(( $(date +%s) - started )) -l
   rc=$?
   echo "== droiddeck-desktop: Plasma ended ($rc)"
 fi
-if [ "$rc" -eq 0 ]; then
-  /usr/local/bin/droiddeck-steam-launch bigpicture
-  sleep 30
-fi
 exit $rc

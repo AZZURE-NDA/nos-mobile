@@ -4,12 +4,36 @@
 # shows the desktop from a PipeWire screencast stream.
 set -u
 export XDG_SESSION_TYPE=wayland XDG_CURRENT_DESKTOP=GNOME XDG_SESSION_DESKTOP=gnome DESKTOP_SESSION=gnome
+# The viewer is a screencast, so the stock panel offers a "stop sharing" button that ends the whole
+# desktop. The nos mode is Ubuntu's mode without that button, the welcome tour or snap helpers.
 if [ -f /usr/share/gnome-shell/modes/ubuntu.json ]; then
-  export XDG_CURRENT_DESKTOP=ubuntu:GNOME XDG_SESSION_DESKTOP=ubuntu DESKTOP_SESSION=ubuntu GNOME_SHELL_SESSION_MODE=ubuntu
+  cat > /usr/share/gnome-shell/modes/nos.json <<'MODE'
+{
+    "parentMode": "user",
+    "stylesheetName": "Yaru/gnome-shell.css",
+    "colorScheme": "prefer-light",
+    "themeResourceName": "theme/Yaru/gnome-shell-theme.gresource",
+    "iconsResourceName": "theme/Yaru/gnome-shell-icons.gresource",
+    "showWelcomeDialog": false,
+    "panel": {
+        "left": ["activities"],
+        "center": ["dateMenu"],
+        "right": ["screenRecording", "dwellClick", "a11y", "keyboard", "quickSettings"]
+    },
+    "enabledExtensions": [
+        "ubuntu-dock@ubuntu.com",
+        "ubuntu-appindicators@ubuntu.com",
+        "ding@rastersoft.com",
+        "tiling-assistant@ubuntu.com"
+    ]
+}
+MODE
+  export XDG_CURRENT_DESKTOP=ubuntu:GNOME XDG_SESSION_DESKTOP=ubuntu DESKTOP_SESSION=ubuntu GNOME_SHELL_SESSION_MODE=nos
 fi
 export GDK_BACKEND=wayland,x11 QT_QPA_PLATFORM="wayland;xcb"
 unset KDE_FULL_SESSION KDE_SESSION_VERSION KWIN_COMPOSE QT_QUICK_BACKEND
 host_display=${WAYLAND_DISPLAY:-wayland-0}
+mkdir -p "$HOME/Desktop" 2>/dev/null
 
 # The shell uses logind only when this directory exists; the runtime has no logind.
 rm -rf /run/systemd/seats 2>/dev/null
