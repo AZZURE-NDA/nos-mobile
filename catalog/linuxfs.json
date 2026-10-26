@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "category": "linux-runtime",
-  "release": "ubuntu-r2",
-  "name": "Linux runtime (Ubuntu 26.04 LTS + KDE Plasma)",
-  "version": "nos-ubuntu-26.04-r2",
-  "url": "https://github.com/AZZURE-NDA/nos-mobile/releases/download/ubuntu-r2/linuxfs-ubuntu.tar.zst",
-  "sha256": "939e0f284b9ee61a762078ad1745a1a63d2e0244397a0a2a7713851f42ba98e7",
-  "size": 618567897,
-  "file_size": 618567897,
-  "note": "Ubuntu 26.04.1 LTS arm64 with KDE Plasma 6.6, Mesa 26.0 (Zink), Firefox from Mozilla's apt repository, Flatpak and PipeWire. No snapd. r2 adds network tools and the Yaru theme."
+  "release": "ubuntu-r3",
+  "name": "Linux runtime (Ubuntu 26.04 LTS + KDE Plasma + GNOME)",
+  "version": "nos-ubuntu-26.04-r3",
+  "url": "https://github.com/AZZURE-NDA/nos-mobile/releases/download/ubuntu-r3/linuxfs-ubuntu.tar.zst",
+  "sha256": "4088e85289c202c5b976df310bccb86cf4bf47218d54698cfefca059a0d5d406",
+  "size": 772451931,
+  "file_size": 772451931,
+  "note": "Ubuntu 26.04.1 LTS arm64 with KDE Plasma 6.6 (default) and GNOME 50 (Ubuntu session, dock, Yaru), Mesa 26.0 (Zink), Firefox from Mozilla's apt repository, Flatpak and PipeWire. No snapd. r3 adds GNOME; switch with: echo gnome > ~/.config/nos-desktop-shell (N-OS r5 or newer)."
 }
