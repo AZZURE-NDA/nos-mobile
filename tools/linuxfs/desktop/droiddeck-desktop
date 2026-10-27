@@ -44,14 +44,13 @@ python3 /usr/local/bin/droiddeck-open --install 2>&1 | sed 's/^/[open] /'
 export APPIMAGE_EXTRACT_AND_RUN=1
 [ -e /etc/xdg/kiorc ] || printf '[Executable scripts]\nbehaviourOnLaunch=execute\n' >/etc/xdg/kiorc 2>/dev/null
 desktop_dir=$(xdg-user-dir DESKTOP 2>/dev/null); [ -n "$desktop_dir" ] && [ "$desktop_dir" != "$HOME" ] || desktop_dir=$HOME/Desktop
-if [ ! -e "$HOME/.config/droiddeck-desktop-icons" ]; then
-  mkdir -p "$desktop_dir" "$HOME/.config"
-  cp -f /usr/share/applications/droiddeck-return-gaming.desktop "$desktop_dir/Return.desktop" 2>/dev/null
-  cp -f /usr/share/applications/steamdeck-steam.desktop "$desktop_dir/steam.desktop" 2>/dev/null
-  chmod +x "$desktop_dir"/*.desktop 2>/dev/null
-  touch "$HOME/.config/droiddeck-desktop-icons"
+if [ ! -e "$HOME/.config/nos-desktop-icons" ]; then
+  mkdir -p "$HOME/.config"
+  # Earlier versions put Steam and Return to Gaming Mode on the desktop; Log Out now returns to the app.
+  cmp -s "$desktop_dir/Return.desktop" /usr/share/applications/droiddeck-return-gaming.desktop && rm -f "$desktop_dir/Return.desktop"
+  cmp -s "$desktop_dir/steam.desktop" /usr/share/applications/steamdeck-steam.desktop && rm -f "$desktop_dir/steam.desktop"
+  touch "$HOME/.config/nos-desktop-icons"
 fi
-[ -f "$desktop_dir/Return.desktop" ] && cp -f /usr/share/applications/droiddeck-return-gaming.desktop "$desktop_dir/Return.desktop" 2>/dev/null
 update-mime-database /usr/share/mime >/dev/null 2>&1 &
 [ -f /usr/share/icons/hicolor/icon-theme.cache ] || gtk-update-icon-cache -q -t /usr/share/icons/hicolor 2>/dev/null &
 [ -f /usr/share/glib-2.0/schemas/gschemas.compiled ] || glib-compile-schemas /usr/share/glib-2.0/schemas 2>/dev/null

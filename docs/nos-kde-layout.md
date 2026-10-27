@@ -21,6 +21,18 @@ an N-OS look on KDE at native speed. `~/.config/nos-kde-layout` picks the layout
 - The traffic-light decoration needs KWin's Aurorae engine (`kwin-style-aurorae`, runtime r4 and
   newer); without it the layout keeps Breeze with the buttons on the left.
 
+- Since `VERSION=5` it also sets the N-OS splash screen (logo with a progress bar while Plasma
+  loads, part of `org.nos.desktop`) and makes the `N-OS` Konsole profile the default (Ubuntu Mono 13,
+  a dark scheme with the traffic-light colours, the folder as the tab title, no scrollbar).
+- The desktop no longer gets Steam and Return to Gaming Mode icons; `droiddeck-desktop` removes the
+  copies earlier versions put there once (only if they are unchanged), since Log Out returns to the app.
+- A full-screen Launchpad (`org.kde.plasma.kickerdash`) was tried and left out: Ubuntu ships it in
+  `plasma-widgets-addons`, which pulls in QtWebEngine.
+
+![The N-OS splash screen](images/nos-splash.png)
+
+![Konsole with the N-OS profile](images/nos-konsole.png)
+
 Tested in an Ubuntu 26.04 chroot: Plasma nested in a headless Sway (the app's compositor stand-in).
 
 ## Lock screen with a PIN

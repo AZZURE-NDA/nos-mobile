@@ -5,7 +5,7 @@
 #   ubuntu  dark top bar with the clock, dock on the left
 #   classic Plasma's own, restored from the backup taken when an N-OS layout was first applied
 set -u
-VERSION=4
+VERSION=5
 LNF=org.nos.desktop
 CONF=$HOME/.config
 mode=$(head -n1 "$CONF/nos-kde-layout" 2>/dev/null)
@@ -44,6 +44,68 @@ name=breeze-dark
 [kwinrc][org.kde.kdecoration2]
 library=org.kde.breeze
 DEFAULTS
+  mkdir -p "$lnf/contents/splash/images"
+  cat > "$lnf/contents/splash/images/nos-mark.svg" <<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="100 90 232 252">
+  <g fill="none" stroke="#FFFFFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="34">
+    <path d="M150 292 V140"/><path d="M282 292 V140"/><path d="M150 140 L282 292"/>
+  </g>
+  <circle cx="150" cy="140" r="27" fill="#1E9BFF" stroke="#0B0F14" stroke-width="10"/>
+  <circle cx="282" cy="292" r="27" fill="#1E9BFF" stroke="#0B0F14" stroke-width="10"/>
+</svg>
+SVG
+  cat > "$lnf/contents/splash/Splash.qml" <<'QML'
+import QtQuick
+import org.kde.kirigami as Kirigami
+
+Rectangle {
+    id: root
+    property int stage
+    gradient: Gradient {
+        GradientStop { position: 0.0; color: "#0B0F14" }
+        GradientStop { position: 1.0; color: "#16233A" }
+    }
+
+    Column {
+        id: content
+        anchors.centerIn: parent
+        spacing: Kirigami.Units.gridUnit * 1.5
+        opacity: 0
+        Component.onCompleted: opacity = 1
+        Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+
+        Image {
+            anchors.horizontalCenter: parent.horizontalCenter
+            source: "images/nos-mark.svg"
+            sourceSize.width: Kirigami.Units.gridUnit * 6
+            sourceSize.height: Kirigami.Units.gridUnit * 6.5
+        }
+        Text {
+            anchors.horizontalCenter: parent.horizontalCenter
+            text: "N-OS"
+            color: "#F2F5FA"
+            font.family: "Ubuntu"
+            font.weight: Font.Light
+            font.pixelSize: Kirigami.Units.gridUnit * 2
+            font.letterSpacing: Kirigami.Units.gridUnit * 0.3
+        }
+        Rectangle {
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: Kirigami.Units.gridUnit * 10
+            height: 4
+            radius: 2
+            color: "#26344D"
+            Rectangle {
+                height: parent.height
+                radius: 2
+                color: "#1E9BFF"
+                width: parent.width * Math.min(1, Math.max(0.08, root.stage / 6))
+                Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutCubic } }
+            }
+        }
+    }
+}
+QML
   [ "$mode" = atelier ] && cat > "$lnf/contents/layouts/org.kde.plasma.desktop-layout.js" <<'LAYOUT'
 var desktops = desktopsForActivity(currentActivity());
 for (var i = 0; i < desktops.length; i++) {
@@ -146,6 +208,92 @@ apps.writeConfig("icon", "view-app-grid-symbolic");
 apps.currentConfigGroup = ["Shortcuts"];
 apps.writeConfig("global", "Alt+F1");
 LAYOUT
+  mkdir -p /usr/share/konsole
+  cat > /usr/share/konsole/N-OS.colorscheme <<'SCHEME'
+[General]
+Description=N-OS
+Opacity=1
+
+[Background]
+Color=21,25,33
+[BackgroundIntense]
+Color=27,32,42
+[BackgroundFaint]
+Color=21,25,33
+[Foreground]
+Color=224,229,238
+[ForegroundIntense]
+Color=255,255,255
+[ForegroundFaint]
+Color=160,168,182
+[Color0]
+Color=42,48,60
+[Color0Intense]
+Color=92,101,118
+[Color0Faint]
+Color=42,48,60
+[Color1]
+Color=255,95,87
+[Color1Intense]
+Color=255,130,122
+[Color1Faint]
+Color=190,80,74
+[Color2]
+Color=40,200,64
+[Color2Intense]
+Color=110,226,124
+[Color2Faint]
+Color=40,150,56
+[Color3]
+Color=254,188,46
+[Color3Intense]
+Color=255,212,110
+[Color3Faint]
+Color=190,142,40
+[Color4]
+Color=52,120,246
+[Color4Intense]
+Color=110,160,255
+[Color4Faint]
+Color=48,96,186
+[Color5]
+Color=176,124,240
+[Color5Intense]
+Color=204,164,255
+[Color5Faint]
+Color=134,98,182
+[Color6]
+Color=30,155,255
+[Color6Intense]
+Color=110,196,255
+[Color6Faint]
+Color=30,118,190
+[Color7]
+Color=200,206,216
+[Color7Intense]
+Color=255,255,255
+[Color7Faint]
+Color=150,156,166
+SCHEME
+  cat > /usr/share/konsole/N-OS.profile <<'PROFILE'
+[Appearance]
+ColorScheme=N-OS
+Font=Ubuntu Mono,13,-1,5,400,0,0,0,0,0,0,0,0,0,0,1
+UseFontLineChararacters=true
+
+[General]
+Name=N-OS
+Parent=FALLBACK/
+LocalTabTitleFormat=%d
+RemoteTabTitleFormat=%u@%h
+TerminalMargin=8
+TerminalCenter=false
+DimWhenInactive=false
+
+[Scrolling]
+ScrollBarPosition=2
+HistorySize=10000
+PROFILE
   if [ -d /usr/share/icons/Yaru ]; then
     mkdir -p /usr/share/icons/NOS-Yaru/scalable/apps
     cat > /usr/share/icons/NOS-Yaru/index.theme <<'THEME'
@@ -378,6 +526,9 @@ set_look() {
     kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnLeft ""
     kwriteconfig6 --file kwinrc --group org.kde.kdecoration2 --key ButtonsOnRight "IAX"
   fi
+  kwriteconfig6 --file ksplashrc --group KSplash --key Engine KSplashQML
+  kwriteconfig6 --file ksplashrc --group KSplash --key Theme "$LNF"
+  kwriteconfig6 --file konsolerc --group "Desktop Entry" --key DefaultProfile N-OS.profile
   [ -d /usr/share/icons/NOS-Yaru ] && kwriteconfig6 --file kdeglobals --group Icons --key Theme NOS-Yaru
   if [ -n "$font" ]; then
     kwriteconfig6 --file kdeglobals --group General --key font "Ubuntu,11,-1,5,400,0,0,0,0,0,0,0,0,0,0,1"
@@ -393,7 +544,7 @@ set_look() {
 install_files || { echo "== nos-kde-layout: cannot write the layout files"; exit 0; }
 
 if [ "$mode" != classic ] && [ "$applied" != "$mode:$VERSION" ]; then
-  for f in plasma-org.kde.plasma.desktop-appletsrc plasmashellrc kdeglobals kwinrc plasmarc; do
+  for f in plasma-org.kde.plasma.desktop-appletsrc plasmashellrc kdeglobals kwinrc plasmarc ksplashrc konsolerc; do
     [ -f "$CONF/$f" ] && [ ! -f "$CONF/$f.pre-nos" ] && cp -p "$CONF/$f" "$CONF/$f.pre-nos"
   done
   # Plasma builds a fresh layout from the look-and-feel package only when it has no saved layout.
@@ -402,7 +553,7 @@ if [ "$mode" != classic ] && [ "$applied" != "$mode:$VERSION" ]; then
   echo "$mode:$VERSION" > "$CONF/nos-kde-layout-applied"
   echo "== nos-kde-layout: N-OS $mode layout applied (v$VERSION)"
 elif [ "$mode" = classic ] && [ -n "$applied" ]; then
-  for f in plasma-org.kde.plasma.desktop-appletsrc plasmashellrc kdeglobals kwinrc plasmarc; do
+  for f in plasma-org.kde.plasma.desktop-appletsrc plasmashellrc kdeglobals kwinrc plasmarc ksplashrc konsolerc; do
     if [ -f "$CONF/$f.pre-nos" ]; then mv -f "$CONF/$f.pre-nos" "$CONF/$f"; else rm -f "$CONF/$f"; fi
   done
   rm -f "$CONF/nos-kde-layout-applied"
