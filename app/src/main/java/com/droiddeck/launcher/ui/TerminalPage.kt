@@ -93,7 +93,7 @@ private fun ShellPreview(modifier: Modifier) {
             Text("wlan0   UP   192.168.1.24/24", fontFamily = FontFamily.Monospace, fontSize = 13.sp, color = Color(0xFFA0A8B6))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Line("root@n-os", ":~$ ", "")
-                ThinkingDots(Modifier.padding(start = 2.dp), dot = 5.dp)
+                ThinkingOrb(Modifier.padding(start = 4.dp).size(18.dp), state = OrbState.Working, ink = Color(0xFFE0E5EE))
             }
         }
     }

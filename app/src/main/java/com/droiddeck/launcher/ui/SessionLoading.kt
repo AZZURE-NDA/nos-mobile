@@ -242,8 +242,9 @@ fun LoadingOverlay(
             modifier = Modifier.align(Alignment.Center).verticalScroll(rememberScrollState()).padding(horizontal = 32.dp, vertical = 24.dp),
         ) {
             key(flood == null) {
-                LogoThrobber(
-                    Modifier.width(if (ended) 88.dp else 110.dp).onGloballyPositioned { ball = throbberBall(it.boundsInRoot()).also { b -> ThrobberSpot.ball = b } },
+                ThinkingOrb(
+                    Modifier.width(if (ended) 96.dp else 132.dp).onGloballyPositioned { ball = orbBall(it.boundsInRoot()).also { b -> ThrobberSpot.ball = b } },
+                    state = OrbState.Connecting,
                     running = !ended && flood == null,
                 )
             }
@@ -252,7 +253,6 @@ fun LoadingOverlay(
                 if (ended) stringResource(R.string.load_ended) else title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold,
                 color = colors.onBackground, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
-            if (!ended && flood == null) ThinkingDots(Modifier.padding(top = 10.dp))
             Text(
                 if (ended) step else detail, fontSize = 14.sp, lineHeight = 20.sp, color = colors.onSurfaceVariant, textAlign = TextAlign.Center,
                 maxLines = if (ended) 12 else 2, overflow = TextOverflow.Ellipsis,
