@@ -458,7 +458,7 @@ class SessionService : Service() {
         guest.add("BL_DEBUG_DIR=" + sessionDir.path)
 
         val fakeInputDir = File(sessionRoot, "dev/input").apply { mkdirs() }
-        val controllersOn = !File(Environment.getExternalStorageDirectory(), NO_PAD_SWITCH).exists()
+        val controllersOn = File(Environment.getExternalStorageDirectory(), PAD_SWITCH).exists()
         SessionState.deckPad = false
         deckBinds = emptyList()
         inputSysfs = null
@@ -1931,7 +1931,7 @@ class SessionService : Service() {
         /** How long the game must stay gone before the client is asked to exit: launchers restart games. */
         private const val GAME_EXIT_GRACE_MS = 10_000L
         private const val GAME_EXIT_POLL_MS = 2_000L
-        private const val NO_PAD_SWITCH = "Download/droiddeck-no-pad"
+        private const val PAD_SWITCH = "Download/nos-gamepads"
         private const val NO_UINPUT_SWITCH = "Download/droiddeck-no-uinput"
         private const val NO_DECK_PAD_SWITCH = "Download/droiddeck-no-deck-pad"
         private const val NO_STEAM_TOUCH_SWITCH = "Download/droiddeck-no-steam-touch"

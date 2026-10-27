@@ -274,7 +274,7 @@ object DeviceReport {
             k("Download/droiddeck-env", "(ignored - it moved to Android/data/${context.packageName}/files)")
         }
         for (name in listOf("droiddeck-tu-debug", "droiddeck-driver",
-                            "droiddeck-osc", "droiddeck-no-pad",
+                            "droiddeck-osc", "nos-gamepads",
                             "droiddeck-no-hud")) {
             val f = File(Environment.getExternalStorageDirectory(), "Download/$name")
             if (f.isFile) k(name, FileUtils.readString(f)?.trim()?.replace('\n', ' ')?.ifEmpty { "(present, empty)" } ?: "(present)")

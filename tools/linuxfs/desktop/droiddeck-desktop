@@ -82,7 +82,13 @@ if [ "$(cat /usr/share/droiddeck/kwin-compositor 2>/dev/null)" = opengl ]; then
 fi
 [ -x /usr/local/bin/nos-kde-layout ] && /usr/local/bin/nos-kde-layout
 echo "== droiddeck-desktop: Plasma on $WAYLAND_DISPLAY"
+started=$(date +%s)
 dbus-run-session -- startplasma-wayland
 rc=$?
 echo "== droiddeck-desktop: Plasma ended ($rc)"
+# Log Out ends Plasma with a non-zero status; after a real session that is the user leaving, not a crash.
+if [ "$rc" -ne 0 ] && [ $(( $(date +%s) - started )) -ge 20 ]; then
+  echo "== droiddeck-desktop: treating the end of a ${rc}-status session as a log out"
+  rc=0
+fi
 exit $rc

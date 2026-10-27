@@ -15,7 +15,8 @@ import java.io.File
 
 object SessionFiles {
     private const val TAG = "SessionFiles"
-    private const val NO_PAD_SWITCH = "Download/droiddeck-no-pad"
+    /** N-OS has no games: controller emulation (libfakeinput) loads only when this file exists. */
+    private const val PAD_SWITCH = "Download/nos-gamepads"
     const val DIRECTAUDIO_DIR = "usr/local/lib/directaudio"
     private const val STAGED_LEDGER = "usr/local/.droiddeck-staged"
     val DIRECTAUDIO_SETS = arrayOf("linux-wine11", "linux-wine11-systhread")
@@ -201,7 +202,7 @@ object SessionFiles {
         ledger.save()
         for (old in arrayOf("aarch64-unix", "aarch64-windows", "i386-windows")) File(root, "$DIRECTAUDIO_DIR/lib/wine/$old").deleteRecursively()
         val preload = StringBuilder("/usr/local/lib/libblsession.so\n")
-        if (!File(Environment.getExternalStorageDirectory(), NO_PAD_SWITCH).exists()) {
+        if (File(Environment.getExternalStorageDirectory(), PAD_SWITCH).exists()) {
             preload.append("/usr/local/lib/libfakeinput.so\n")
         }
         if (ProotFastPath.enabled(context)) preload.append(ProotFastPath.LIBRARY + "\n")
