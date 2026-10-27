@@ -1,0 +1,135 @@
+#!/usr/bin/python3
+"""N-OS PIN for the KDE lock screen.
+
+The runtime has no working Unix passwords (the session runs as the app's Android user), so the lock
+screen's PAM service checks a PIN kept in ~/.config/nos-pin instead.
+
+  nos-pin set      choose or change the PIN (locks the desktop at start and when you lock it)
+  nos-pin clear    remove the PIN (the desktop opens without a lock screen)
+  nos-pin status   say whether a PIN is set
+  nos-pin setup    run by the desktop before Plasma starts: PAM service and lock settings
+  nos-pin check    run by PAM (pam_exec expose_authtok): reads the PIN on stdin
+"""
+import getpass
+import hashlib
+import hmac
+import os
+import pwd
+import secrets
+import subprocess
+import sys
+
+HOME = pwd.getpwuid(os.getuid()).pw_dir
+PIN_FILE = os.path.join(HOME, ".config", "nos-pin")
+PAM_FILE = "/etc/pam.d/kde"
+ROUNDS = 200_000
+PAM_SERVICE = """# N-OS: the lock screen checks the N-OS PIN (nos-pin), not a Unix password.
+auth     required  pam_exec.so expose_authtok quiet /usr/local/bin/nos-pin check
+account  required  pam_permit.so
+password required  pam_deny.so
+session  required  pam_permit.so
+"""
+
+
+def digest(pin, salt):
+    return hashlib.pbkdf2_hmac("sha256", pin.encode(), salt, ROUNDS)
+
+
+def stored():
+    try:
+        with open(PIN_FILE, encoding="ascii") as f:
+            salt_hex, hash_hex = f.read().split()[:2]
+        return bytes.fromhex(salt_hex), bytes.fromhex(hash_hex)
+    except (OSError, ValueError):
+        return None
+
+
+def kwrite(file, group, key, value):
+    subprocess.run(["kwriteconfig6", "--file", file, "--group", group, "--key", key, value], check=False)
+
+
+def apply_settings():
+    has_pin = stored() is not None
+    kwrite("kscreenlockerrc", "Daemon", "LockOnStart", "true" if has_pin else "false")
+    kwrite("kscreenlockerrc", "Daemon", "Autolock", "true" if has_pin else "false")
+    kwrite("kscreenlockerrc", "Daemon", "Timeout", "10")
+    kwrite("kscreenlockerrc", "Daemon", "LockGrace", "5")
+    subprocess.run(["kwriteconfig6", "--file", "kscreenlockerrc", "--group", "Greeter", "--group", "Wallpaper",
+                    "--group", "org.kde.image", "--group", "General", "--key", "Image",
+                    "file:///usr/share/wallpapers/N-OS-Flow"], check=False)
+    # Without a PIN, a lock screen could never be unlocked.
+    restriction = "true" if has_pin else "false"
+    kwrite("kdeglobals", "KDE Action Restrictions", "action/lock_screen", restriction)
+
+
+def setup():
+    try:
+        current = open(PAM_FILE, encoding="utf-8").read()
+    except OSError:
+        current = ""
+    if current != PAM_SERVICE:
+        try:
+            with open(PAM_FILE, "w", encoding="utf-8") as f:
+                f.write(PAM_SERVICE)
+        except OSError as e:
+            print(f"nos-pin: cannot write {PAM_FILE}: {e}", file=sys.stderr)
+    apply_settings()
+    return 0
+
+
+def check():
+    entry = stored()
+    if entry is None:
+        return 1
+    pin = sys.stdin.buffer.read().split(b"\0", 1)[0].decode(errors="replace").strip()
+    salt, expected = entry
+    return 0 if pin and hmac.compare_digest(digest(pin, salt), expected) else 1
+
+
+def set_pin():
+    first = getpass.getpass("New PIN (4 or more digits): ")
+    if len(first) < 4 or not first.isdigit():
+        print("A PIN is 4 or more digits. Nothing changed.")
+        return 1
+    if getpass.getpass("Repeat the PIN: ") != first:
+        print("The two PINs differ. Nothing changed.")
+        return 1
+    salt = secrets.token_bytes(16)
+    os.makedirs(os.path.dirname(PIN_FILE), exist_ok=True)
+    fd = os.open(PIN_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w", encoding="ascii") as f:
+        f.write(f"{salt.hex()} {digest(first, salt).hex()}\n")
+    apply_settings()
+    print("PIN set. The desktop asks for it when it opens, after 10 minutes idle, and when you lock it.")
+    return 0
+
+
+def clear():
+    try:
+        os.remove(PIN_FILE)
+    except FileNotFoundError:
+        pass
+    apply_settings()
+    print("PIN removed. The desktop opens without a lock screen.")
+    return 0
+
+
+def main():
+    cmd = sys.argv[1] if len(sys.argv) > 1 else "status"
+    if cmd == "check":
+        return check()
+    if cmd == "setup":
+        return setup()
+    if cmd == "set":
+        return set_pin()
+    if cmd == "clear":
+        return clear()
+    if cmd == "status":
+        print("A PIN is set." if stored() else "No PIN is set. Run: nos-pin set")
+        return 0
+    print(__doc__)
+    return 2
+
+
+if __name__ == "__main__":
+    sys.exit(main())

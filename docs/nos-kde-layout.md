@@ -22,3 +22,17 @@ an N-OS look on KDE at native speed. `~/.config/nos-kde-layout` picks the layout
   newer); without it the layout keeps Breeze with the buttons on the left.
 
 Tested in an Ubuntu 26.04 chroot: Plasma nested in a headless Sway (the app's compositor stand-in).
+
+## Lock screen with a PIN
+
+The runtime has no working Unix passwords (the session runs as the app's Android user), so the
+KDE lock screen's PAM service (`/etc/pam.d/kde`) checks an N-OS PIN instead, through
+`pam_exec` and `tools/linuxfs/desktop/nos-pin`:
+
+- `nos-pin set` chooses the PIN (4+ digits, stored as a salted PBKDF2 hash in `~/.config/nos-pin`).
+  With a PIN set, the desktop locks when it opens, after 10 minutes idle, and from Lock in the menu.
+- `nos-pin clear` removes it; without a PIN the desktop opens directly and locking is disabled, since
+  a lock screen without a PIN could never be unlocked.
+- `nos-pin setup` runs before Plasma starts and writes the PAM service and lock settings.
+
+Log Out ends the session and returns to the app's home screen instead of reporting a crash.

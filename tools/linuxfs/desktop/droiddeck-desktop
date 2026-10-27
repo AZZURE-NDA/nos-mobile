@@ -81,6 +81,7 @@ if [ "$(cat /usr/share/droiddeck/kwin-compositor 2>/dev/null)" = opengl ]; then
   fi
 fi
 [ -x /usr/local/bin/nos-kde-layout ] && /usr/local/bin/nos-kde-layout
+[ -x /usr/local/bin/nos-pin ] && /usr/local/bin/nos-pin setup
 echo "== droiddeck-desktop: Plasma on $WAYLAND_DISPLAY"
 started=$(date +%s)
 dbus-run-session -- startplasma-wayland

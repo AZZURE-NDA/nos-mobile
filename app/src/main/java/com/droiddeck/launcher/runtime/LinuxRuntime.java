@@ -413,7 +413,7 @@ public final class LinuxRuntime {
         File root = rootDir(context);
         int uid = Process.myUid();
         Files.write(new File(root, "etc/passwd").toPath(),
-                ("root:x:" + uid + ":" + uid + ":root:/root:/bin/bash\n").getBytes(StandardCharsets.UTF_8));
+                ("root:x:" + uid + ":" + uid + ":N-OS:/root:/bin/bash\n").getBytes(StandardCharsets.UTF_8));
         Files.write(new File(root, "etc/group").toPath(),
                 ("root:x:" + uid + ":\n").getBytes(StandardCharsets.UTF_8));
     }
