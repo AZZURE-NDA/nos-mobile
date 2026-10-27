@@ -1,6 +1,5 @@
 package com.droiddeck.launcher.ui
 
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -8,6 +7,9 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.dp
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -34,20 +36,69 @@ internal fun LogoThrobber(modifier: Modifier = Modifier, running: Boolean = true
         val stroke = NosMark.STROKE * s
         val a = px(NosMark.AX, NosMark.AY)
         val b = px(NosMark.BX, NosMark.BY)
-        drawLine(ink, a, px(NosMark.AX, NosMark.BY), stroke, StrokeCap.Round)
-        drawLine(ink, px(NosMark.BX, NosMark.AY), b, stroke, StrokeCap.Round)
+        val path = listOf(px(NosMark.AX, NosMark.BY), a, b, px(NosMark.BX, NosMark.AY))
+        drawLine(ink, path[0], a, stroke, StrokeCap.Round)
+        drawLine(ink, path[3], b, stroke, StrokeCap.Round)
         drawLine(ink, a, b, stroke, StrokeCap.Round)
+        var nearA = 0f
+        var nearB = 0f
         if (!still) {
-            val t = Settle.transform(if (p < 0.5f) p * 2f else 2f - p * 2f)
-            drawCircle(node, radius = stroke * 0.42f, center = Offset(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t))
+            // A signal runs up the left stem, across the link and up the right stem, trailing a comet tail.
+            val head = p * (1f + TAIL)
+            for (i in TRAIL_DOTS downTo 0) {
+                val u = head - TAIL * i / TRAIL_DOTS
+                if (u < 0f || u > 1f) continue
+                val fade = smooth(minOf(u, 1f - u) / EDGE)
+                val k = 1f - i.toFloat() / (TRAIL_DOTS + 1)
+                drawCircle(node.copy(alpha = node.alpha * fade * k * k), radius = stroke * (0.2f + 0.24f * k), center = along(path, u))
+            }
+            val h = head.coerceIn(0f, 1f)
+            nearA = 1f - smooth(kotlin.math.abs(h - NODE_A_AT) / NODE_REACH)
+            nearB = 1f - smooth(kotlin.math.abs(h - NODE_B_AT) / NODE_REACH)
         }
-        val pulseA = if (still) 1f else 1f - 0.12f * sin(p * 2 * Math.PI).toFloat()
-        val pulseB = if (still) 1f else 1f + 0.12f * sin(p * 2 * Math.PI).toFloat()
-        for ((c, k) in listOf(a to pulseA, b to pulseB)) {
+        for ((c, k) in listOf(a to 1f + 0.16f * nearA, b to 1f + 0.16f * nearB)) {
             drawCircle(ring, radius = (NosMark.NODE + NosMark.RING) * s * k, center = c)
             drawCircle(node, radius = NosMark.NODE * s * k, center = c)
         }
     }
+}
+
+/** The three bouncing dots of a chat app's "thinking" indicator. */
+@Composable
+internal fun ThinkingDots(modifier: Modifier = Modifier, color: androidx.compose.ui.graphics.Color = LocalPalette.current.signal, dot: androidx.compose.ui.unit.Dp = 7.dp) {
+    val wave = rememberInfiniteTransition(label = "dots")
+        .animateFloat(0f, 1f, infiniteRepeatable(tween(DOTS_MS, easing = LinearEasing)), label = "wave")
+    val still = Motion.scale == 0f
+    Canvas(modifier.width(dot * 5).height(dot * 2)) {
+        val r = dot.toPx() / 2f
+        for (i in 0 until 3) {
+            val phase = if (still) 0.5f else ((wave.value - i * 0.16f) % 1f + 1f) % 1f
+            val lift = if (phase < 0.5f) sin(phase * 2f * Math.PI.toFloat()) else 0f
+            drawCircle(
+                color.copy(alpha = color.alpha * (0.4f + 0.6f * lift)),
+                radius = r * (0.85f + 0.15f * lift),
+                center = Offset(r + i * r * 4f, size.height - r - lift * r * 1.6f),
+            )
+        }
+    }
+}
+
+private fun smooth(x: Float): Float {
+    val t = x.coerceIn(0f, 1f)
+    return t * t * (3f - 2f * t)
+}
+
+private fun along(points: List<Offset>, u: Float): Offset {
+    val lengths = points.zipWithNext { p, q -> (q - p).getDistance() }
+    var left = lengths.sum() * u.coerceIn(0f, 1f)
+    for ((i, len) in lengths.withIndex()) {
+        if (left <= len || i == lengths.lastIndex) {
+            val f = if (len == 0f) 0f else (left / len).coerceIn(0f, 1f)
+            return points[i] + (points[i + 1] - points[i]) * f
+        }
+        left -= len
+    }
+    return points.last()
 }
 
 internal fun throbberBall(bounds: androidx.compose.ui.geometry.Rect): Pair<Offset, Float> {
@@ -68,8 +119,15 @@ private object NosMark {
     const val RING = 10f
 }
 
-private const val LOOP_MS = 1900
-private val Settle = CubicBezierEasing(0.5f, 0f, 0.3f, 1f)
+private const val LOOP_MS = 1700
+private const val DOTS_MS = 1200
+private const val TAIL = 0.22f
+private const val TRAIL_DOTS = 24
+private const val EDGE = 0.08f
+// The nodes sit 30% and 70% of the way along the stem-link-stem path.
+private const val NODE_A_AT = 0.30f
+private const val NODE_B_AT = 0.70f
+private const val NODE_REACH = 0.12f
 
 internal object LogoShape {
     const val LEFT = -55.98f

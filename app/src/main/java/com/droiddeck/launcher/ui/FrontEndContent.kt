@@ -237,6 +237,10 @@ private fun Content(
         }
         return
     }
+    if (selected == "terminal") {
+        TerminalPage(s, modifier.padding(horizontal = padH, vertical = padV))
+        return
+    }
     if (selected == "updates") {
         UpdatesPage(s, a, modifier.padding(horizontal = padH, vertical = padV))
         return

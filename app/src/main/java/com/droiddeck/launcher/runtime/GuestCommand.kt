@@ -25,8 +25,16 @@ object GuestCommand {
         }
     }
 
-    private fun runLogged(context: Context, argv: List<String>, fakeRoot: Boolean, linkDir: File?, extraBinds: List<String>?,
-                          fastPath: Boolean, onLine: (String) -> Unit): Int {
+    /** The proot command and host environment for an interactive shell in the guest, for a terminal view's own PTY. */
+    fun shell(context: Context, fakeRoot: Boolean): Pair<List<String>, Map<String, String>> {
+        val (cmd, env) = prepare(context, fakeRoot, null, null, fastPath = !fakeRoot,
+            guestEnv = listOf("TERM=xterm-256color", "COLORTERM=truecolor", "SHELL=/bin/bash", "N_OS_TERMINAL=1"))
+        cmd += listOf("/bin/bash", "-l")
+        return cmd to env
+    }
+
+    private fun prepare(context: Context, fakeRoot: Boolean, linkDir: File?, extraBinds: List<String>?, fastPath: Boolean,
+                        guestEnv: List<String> = emptyList()): Pair<MutableList<String>, Map<String, String>> {
         val root = LinuxRuntime.rootDir(context)
         LinuxRuntime.writeAccounts(context)
         SessionFiles.stage(context, root)
@@ -45,17 +53,25 @@ object GuestCommand {
             "DROIDDECK_BWRAP_SOCKET=${BwrapSpawner.socket(context)}",
             "XDG_DATA_DIRS=/root/.local/share/flatpak/exports/share:/usr/local/share:/usr/share",
         )
+        cmd += guestEnv
         fastPathKey?.let { cmd += ProotFastPath.guestEnv(root, binds, it) }
+        val env = LinkedHashMap<String, String>()
+        env["PROOT_LOADER"] = LinuxRuntime.prootLoader(context).path
+        env["PROOT_TMP_DIR"] = LinuxRuntime.prootTempDir(context).path
+        if (linkDir != null) env["PROOT_L2S_DIR"] = linkDir.path
+        if (SessionPrefs.prootNoSeccomp(context)) env["PROOT_NO_SECCOMP"] = "1"
+        fastPathKey?.let { ProotFastPath.hostEnv(it).let { (k, v) -> env[k] = v } }
+        LinuxRuntime.prootLibraryPath(context).takeIf { it.isNotEmpty() }?.let { env["LD_LIBRARY_PATH"] = it }
+        return cmd to env
+    }
+
+    private fun runLogged(context: Context, argv: List<String>, fakeRoot: Boolean, linkDir: File?, extraBinds: List<String>?,
+                          fastPath: Boolean, onLine: (String) -> Unit): Int {
+        val root = LinuxRuntime.rootDir(context)
+        val (cmd, env) = prepare(context, fakeRoot, linkDir, extraBinds, fastPath)
         cmd += argv
         val builder = ProcessBuilder(cmd).directory(root).redirectErrorStream(true)
-        builder.environment().apply {
-            put("PROOT_LOADER", LinuxRuntime.prootLoader(context).path)
-            put("PROOT_TMP_DIR", LinuxRuntime.prootTempDir(context).path)
-            if (linkDir != null) put("PROOT_L2S_DIR", linkDir.path)
-            if (SessionPrefs.prootNoSeccomp(context)) put("PROOT_NO_SECCOMP", "1")
-            fastPathKey?.let { ProotFastPath.hostEnv(it).let { (k, v) -> put(k, v) } }
-            LinuxRuntime.prootLibraryPath(context).takeIf { it.isNotEmpty() }?.let { put("LD_LIBRARY_PATH", it) }
-        }
+        builder.environment().putAll(env)
         val process = builder.start()
         val pid = HostProcess.pidOf(process)
         OrphanReaper.keep(pid)

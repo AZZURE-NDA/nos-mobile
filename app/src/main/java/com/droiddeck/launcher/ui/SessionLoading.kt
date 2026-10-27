@@ -252,6 +252,7 @@ fun LoadingOverlay(
                 if (ended) stringResource(R.string.load_ended) else title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold,
                 color = colors.onBackground, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis,
             )
+            if (!ended && flood == null) ThinkingDots(Modifier.padding(top = 10.dp))
             Text(
                 if (ended) step else detail, fontSize = 14.sp, lineHeight = 20.sp, color = colors.onSurfaceVariant, textAlign = TextAlign.Center,
                 maxLines = if (ended) 12 else 2, overflow = TextOverflow.Ellipsis,

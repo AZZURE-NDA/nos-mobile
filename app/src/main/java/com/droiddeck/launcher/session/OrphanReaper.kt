@@ -11,6 +11,14 @@ object OrphanReaper {
 
     fun release(pid: Int) { kept.remove(pid) }
 
+    /** Kills a process and everything it started, children first. */
+    fun killTree(pid: Int) {
+        if (pid <= 1) return
+        val uid = android.os.Process.myUid()
+        (descendants(setOf(pid)) - pid).filter { uidOf(it) == uid }.forEach { runCatching { android.os.Process.killProcess(it) } }
+        runCatching { android.os.Process.killProcess(pid) }
+    }
+
     fun reap(reason: String): Int {
         val me = android.os.Process.myPid()
         val uid = android.os.Process.myUid()
