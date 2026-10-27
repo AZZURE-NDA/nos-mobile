@@ -61,11 +61,11 @@ private object OrbClock {
     fun seconds(): Float = ((System.nanoTime() - start) / 1_000_000L % 3_600_000L) / 1000f
 }
 
-private class Dot(val x: Float, val y: Float, val z: Float, var r: Float, val white: Float, val a: Float = 1f, val signal: Boolean = false)
-private class Edge(val x1: Float, val y1: Float, val x2: Float, val y2: Float, val white: Float, val a: Float, val w: Float)
-private class Frame(val dots: List<Dot>, val edges: List<Edge>)
+private class OrbDot(val x: Float, val y: Float, val z: Float, var r: Float, val white: Float, val a: Float = 1f, val signal: Boolean = false)
+private class OrbEdge(val x1: Float, val y1: Float, val x2: Float, val y2: Float, val white: Float, val a: Float, val w: Float)
+private class OrbFrame(val dots: List<OrbDot>, val edges: List<OrbEdge>)
 
-private fun DrawScope.drawFrame(frame: Frame, scale: Float, dark: Boolean, ink: Color, accent: Color) {
+private fun DrawScope.drawFrame(frame: OrbFrame, scale: Float, dark: Boolean, ink: Color, accent: Color) {
     fun shade(white: Float, alpha: Float): Color {
         val w = white.coerceIn(0f, 1f)
         // Ink 0 is the darkest mark; on a dark background the scale is mirrored so near dots read bright.
@@ -133,17 +133,17 @@ private object Orbs {
 
     private fun radiusScale(size: Float) = (size / 300f).pow(0.6f)
 
-    private fun finish(dots: MutableList<Dot>, edges: List<Edge>): Frame {
+    private fun finish(dots: MutableList<OrbDot>, edges: List<OrbEdge>): OrbFrame {
         val visible = dots.filter { it.a >= 0.02f }.onEach { it.r = max(R_MIN, it.r) }.sortedBy { it.z }
-        return Frame(visible, edges.filter { it.a >= 0.02f })
+        return OrbFrame(visible, edges.filter { it.a >= 0.02f })
     }
 
-    fun orbits(size: Float, t: Float): Frame {
+    fun orbits(size: Float, t: Float): OrbFrame {
         val c = size / 2
         val big = c * 0.82f
         val pt = Proj(t * 0.12f, 0.3f, c, c, 1f)
         val rs = radiusScale(size)
-        val dots = ArrayList<Dot>(12 * 43)
+        val dots = ArrayList<OrbDot>(12 * 43)
         for (orb in 0 until 12) {
             val h1 = hash(orb.toFloat(), 1.7f)
             val h2 = hash(orb.toFloat(), 5.2f)
@@ -168,18 +168,18 @@ private object Orbs {
             for (k in 0 until 40) {
                 val p = on(k / 40f * 2 * PI.toFloat())
                 val depth = (p[2] / ro + 1) / 2
-                dots += Dot(p[0], p[1], p[2], 0.9f * rs, 0.72f, 0.5f * (0.4f + 0.6f * depth))
+                dots += OrbDot(p[0], p[1], p[2], 0.9f * rs, 0.72f, 0.5f * (0.4f + 0.6f * depth))
             }
             for (m in 0 until 3) {
                 val p = on(t * speed + m / 3f * 2 * PI.toFloat() + h2 * 6)
                 val depth = (p[2] / ro + 1) / 2
-                dots += Dot(p[0], p[1], p[2], (1.2f + 1.6f * depth) * rs, 0.3f - 0.22f * depth)
+                dots += OrbDot(p[0], p[1], p[2], (1.2f + 1.6f * depth) * rs, 0.3f - 0.22f * depth)
             }
         }
         return finish(dots, emptyList())
     }
 
-    fun web(size: Float, t: Float): Frame {
+    fun web(size: Float, t: Float): OrbFrame {
         val nodeN = 41
         val thr = 0.72f
         val nodeR = 1.4f * 0.95f
@@ -196,7 +196,7 @@ private object Orbs {
             floatArrayOf(x / l, y / l, z / l)
         }
         val projected = Array(nodeN) { pt.at(nodes[it][0], nodes[it][1], nodes[it][2]) }
-        val edges = ArrayList<Edge>()
+        val edges = ArrayList<OrbEdge>()
         for (i in 0 until nodeN) for (j in i + 1 until nodeN) {
             val dx = nodes[i][0] - nodes[j][0]
             val dy = nodes[i][1] - nodes[j][1]
@@ -206,14 +206,14 @@ private object Orbs {
             val p = projected[i]
             val q = projected[j]
             val depth = ((p[2] + q[2]) / 2 + 1) / 2
-            edges += Edge(p[0], p[1], q[0], q[1], 0.42f, (1 - dist / thr) * (0.3f + 0.55f * depth), max(0.6f, 0.8f * rs))
+            edges += OrbEdge(p[0], p[1], q[0], q[1], 0.42f, (1 - dist / thr) * (0.3f + 0.55f * depth), max(0.6f, 0.8f * rs))
         }
-        val dots = ArrayList<Dot>(nodeN + 7)
+        val dots = ArrayList<OrbDot>(nodeN + 7)
         for (i in 0 until nodeN) {
             val p = projected[i]
             val depth = (p[2] + 1) / 2
             val pulse = 1 + 0.25f * sin(t * 1.4f + i * 2.7f)
-            dots += Dot(p[0], p[1], p[2], (nodeR + nodeRDepth * depth) * pulse * rs, 0.55f - 0.45f * depth)
+            dots += OrbDot(p[0], p[1], p[2], (nodeR + nodeRDepth * depth) * pulse * rs, 0.55f - 0.45f * depth)
         }
         for (s in 0 until 7) {
             val seg = floor(t * 0.55f + s * 7.31f)
@@ -230,7 +230,7 @@ private object Orbs {
             val depth = (p[2] + 1) / 2
             // Packets fade in and out at the ends of their run instead of popping.
             val edge = min(f, 1 - f).coerceAtMost(0.12f) / 0.12f
-            dots += Dot(p[0], p[1], p[2], (nodeR * 1.5f + nodeRDepth * depth) * rs, 0.05f, (0.5f + 0.5f * depth) * edge, signal = true)
+            dots += OrbDot(p[0], p[1], p[2], (nodeR * 1.5f + nodeRDepth * depth) * rs, 0.05f, (0.5f + 0.5f * depth) * edge, signal = true)
         }
         return finish(dots, edges)
     }
