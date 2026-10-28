@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "category": "linux-runtime",
-  "release": "ubuntu-r4",
+  "release": "ubuntu-r5",
   "name": "Linux runtime (Ubuntu 26.04 LTS + KDE Plasma)",
-  "version": "nos-ubuntu-26.04-r4",
-  "url": "https://github.com/AZZURE-NDA/nos-mobile/releases/download/ubuntu-r4/linuxfs-ubuntu.tar.zst",
-  "sha256": "494b668c5cf49e39ab0b716aadd221007f065560816a73471e9e07ab6a246728",
-  "size": 618698847,
-  "file_size": 618698847,
-  "note": "Ubuntu 26.04.1 LTS arm64 with KDE Plasma 6.6, KWin's Aurorae engine for the N-OS Atelier window decoration, Mesa 26.0 (Zink), Firefox from Mozilla's apt repository, Flatpak and PipeWire. No snapd. r4 removes GNOME."
+  "version": "nos-ubuntu-26.04-r5",
+  "url": "https://github.com/AZZURE-NDA/nos-mobile/releases/download/ubuntu-r5/linuxfs-ubuntu.tar.zst",
+  "sha256": "26f2fdfc442886e9f44a8525ddf13f781433e4320d404f8e01cc08dc9c1ef387",
+  "size": 724974169,
+  "file_size": 724974169,
+  "note": "Ubuntu 26.04.1 LTS arm64 with KDE Plasma 6.6, KWin's Aurorae engine for the N-OS Atelier window decoration, Mesa 26.0 (Zink), Firefox from Mozilla's apt repository, Flatpak and PipeWire. No snapd. r5 adds Claude Code, openconnect with ocproxy (VPN without root), WireGuard and OpenVPN tools."
 }

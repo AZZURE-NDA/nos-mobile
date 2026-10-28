@@ -1,0 +1,63 @@
+name: Sign and release the APK
+
+# Signs a finished "Build APK" run with the N-OS release key (repository secrets NOS_KEYSTORE_B64 and
+# NOS_KEYSTORE_PASSWORD) and publishes it as a pre-release, so a release no longer needs the key on a PC.
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Build APK run id whose droiddeck-apk artifact to sign'
+        required: true
+      tag:
+        description: 'Release tag, e.g. nos-0.6.0-ubuntu-r16'
+        required: true
+      notes:
+        description: 'Release notes'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download the APK
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download "${{ inputs.run_id }}" -R "$GITHUB_REPOSITORY" -n droiddeck-apk -D out
+          ls -l out
+      - name: Sign
+        env:
+          KEYSTORE_B64: ${{ secrets.NOS_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.NOS_KEYSTORE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          [ -n "$KEYSTORE_B64" ] || { echo "::error::the NOS_KEYSTORE_B64 secret is not set"; exit 1; }
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          umask 077
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/nos.jks"
+          "$BT/zipalign" -p -f 4 out/*.apk aligned.apk
+          APK="N-OS-Mobile-${{ inputs.tag }}.apk"
+          APK="${APK/N-OS-Mobile-nos-/N-OS-Mobile-}"
+          "$BT/apksigner" sign --ks "$RUNNER_TEMP/nos.jks" --ks-type PKCS12 --ks-key-alias nos \
+            --ks-pass env:KEYSTORE_PASSWORD --key-pass env:KEYSTORE_PASSWORD \
+            --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true --out "$APK" aligned.apk
+          rm -f "$RUNNER_TEMP/nos.jks"
+          "$BT/apksigner" verify --print-certs "$APK" | grep "Signer #1 certificate SHA-256"
+          "$BT/apksigner" verify --print-certs "$APK" | grep -q "5f81353382f8196203747a2b0d7aca9cede97137f46959dbe4c9206b6c082338" \
+            || { echo "::error::the APK is not signed with the N-OS release key"; exit 1; }
+          echo "APK=$APK" >> "$GITHUB_ENV"
+      - name: Publish the pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          NOTES: ${{ inputs.notes }}
+        run: |
+          set -euo pipefail
+          gh release create "${{ inputs.tag }}" "$APK" -R "$GITHUB_REPOSITORY" --prerelease \
+            --target "${{ github.sha }}" --title "N-OS Mobile ${{ inputs.tag }}" --notes "${NOTES:-Signed build from run ${{ inputs.run_id }}.}"
+          echo "https://github.com/$GITHUB_REPOSITORY/releases/download/${{ inputs.tag }}/$APK"
