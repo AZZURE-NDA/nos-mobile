@@ -92,6 +92,7 @@ internal object SetupTabs {
     var openLauncher = false
 }
 private const val GLASSES_TAB = 5
+private val SHOWN_SETUP_TABS = listOf(0, LAUNCHER_TAB, STORAGE_TAB, 4)
 
 @Composable
 private fun CheckRow(state: CheckState, title: String, detail: String?, divider: Boolean = true, action: (@Composable () -> Unit)? = null) {
@@ -181,12 +182,16 @@ internal fun SetupPanel(
         onDismiss = { editDownloadPrefix = false },
         onSave = { a.onDownloadPrefix(it); editDownloadPrefix = false },
     )
-    val tabs = listOf(stringResource(R.string.setup_tab_overview), stringResource(R.string.setup_tab_controller), stringResource(R.string.setup_tab_launcher), stringResource(R.string.setup_tab_storage), stringResource(R.string.setup_tab_diagnostics), stringResource(R.string.setup_tab_glasses))
+    val allTabs = listOf(stringResource(R.string.setup_tab_overview), stringResource(R.string.setup_tab_controller), stringResource(R.string.setup_tab_launcher), stringResource(R.string.setup_tab_storage), stringResource(R.string.setup_tab_diagnostics), stringResource(R.string.setup_tab_glasses))
+    // N-OS has no game controllers or XR glasses to set up, so those tabs stay hidden.
+    val shownTabs = SHOWN_SETUP_TABS
+    val tabs = shownTabs.map { allTabs[it] }
     var tab by rememberSaveable { mutableStateOf(if (SetupTabs.openLauncher) LAUNCHER_TAB else 0) }
     SetupTabs.openLauncher = false
     val chipFocus = remember { List(tabs.size) { FocusRequester() } }
     var tabTurned by remember { mutableStateOf(false) }
-    val pick: (Int) -> Unit = { i -> tab = i; tabTurned = true }
+    val pick: (Int) -> Unit = { i -> tab = shownTabs[i]; tabTurned = true }
+    val chip = shownTabs.indexOf(tab).coerceAtLeast(0)
     val inputModeManager = LocalInputModeManager.current
     LaunchedEffect(com.droiddeck.launcher.storage.StorageState.openRequests) {
         if (com.droiddeck.launcher.storage.StorageState.openPending) {
@@ -197,23 +202,23 @@ internal fun SetupPanel(
     LaunchedEffect(tab) {
         if (tabTurned && inputModeManager.inputMode == InputMode.Keyboard) {
             androidx.compose.runtime.withFrameNanos { }
-            runCatching { chipFocus[tab].requestFocus() }
+            runCatching { chipFocus[chip].requestFocus() }
         }
     }
     val wide = !LocalNarrowPane.current
     val runtimeOk = s.ready && !s.busy && !s.removalPending
-    val checks = listOf(gpuOk, runtimeOk, !limitBlocks, signedIn)
+    val checks = listOf(gpuOk, runtimeOk, !limitBlocks)
     val passing = checks.count { it }
     var showChecks by rememberSaveable { mutableStateOf(false) }
     Rise(0, Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier.fillMaxSize().bumpers(
-                onPrevious = { pick((tab + tabs.size - 1) % tabs.size) },
-                onNext = { pick((tab + 1) % tabs.size) },
+                onPrevious = { pick((chip + tabs.size - 1) % tabs.size) },
+                onNext = { pick((chip + 1) % tabs.size) },
             ),
         ) {
             PageHeader(stringResource(R.string.setup_title)) {
-                Box(Modifier.weight(1f)) { SheetChips(tabs, tab, chipFocus, onPick = pick) }
+                Box(Modifier.weight(1f)) { SheetChips(tabs, chip, chipFocus, onPick = pick) }
             }
             Column(modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
                 when (tab) {
@@ -312,7 +317,7 @@ internal fun SetupPanel(
                                 divider = divider,
                             )
                         }
-                        val all = listOf(gpuCheck, runtimeCheck, limitCheck, accountCheck)
+                        val all = listOf(gpuCheck, runtimeCheck, limitCheck)
                         ReadinessCard(
                             passing, checks.size,
                             listOfNotNull(

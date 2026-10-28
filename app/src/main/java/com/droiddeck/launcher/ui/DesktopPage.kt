@@ -105,7 +105,8 @@ internal fun DesktopPage(s: FrontEndState, a: FrontEndActions, modifier: Modifie
     val colors = MaterialTheme.colorScheme
     LaunchedEffect(Unit) { UserAppsState.refresh(ctx) }
     LaunchedEffect(s.ready) { com.droiddeck.launcher.store.StoreState.refresh(ctx) }
-    val installed = s.emulators.filter { it.installed }
+    // N-OS leaves the game emulators out of the desktop's dock.
+    val installed = emptyList<Library.Emulator>()
     val apps = UserAppsState.items
     var adding by rememberSaveable { mutableStateOf(false) }
     val mode = SessionService.MODE_DESKTOP
@@ -167,7 +168,7 @@ private fun DesktopDock(
     val colors = MaterialTheme.colorScheme
     val pal = LocalPalette.current
     val narrow = LocalNarrowPane.current
-    val available = s.emulators.filter { !it.installed }
+    val available = emptyList<Library.Emulator>()
     val flatpaks = com.droiddeck.launcher.store.StoreState.installed
     val keys = installed.map { "emu:${it.id}" } + apps.map { "user:${it.key}" } + flatpaks.map { "flatpak:${it.id}" }
     var lastAt by remember { mutableStateOf<Rect?>(null) }

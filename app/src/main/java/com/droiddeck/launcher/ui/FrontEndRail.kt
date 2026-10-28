@@ -49,6 +49,8 @@ import androidx.compose.material.icons.outlined.LocalMall
 import androidx.compose.material.icons.outlined.SportsEsports
 import androidx.compose.material.icons.outlined.Storefront
 import androidx.compose.material.icons.outlined.SystemUpdate
+import androidx.compose.material.icons.outlined.Lan
+import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.Terminal
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.VideoLibrary
@@ -101,13 +103,15 @@ internal fun SideRail(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.width(if (iconOnly) 64.dp else 92.dp).background(colors.surface).padding(vertical = if (compact) 8.dp else 12.dp),
     ) {
-        val count = 4 + (if (s.isHomeApp) 1 else 0)
+        val count = 6 + (if (s.isHomeApp) 1 else 0)
         BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
         val fit = (maxHeight / count - 4.dp).coerceIn(44.dp, if (iconOnly) 48.dp else if (compact) 52.dp else 60.dp)
         val shown = Hops.railPreview ?: selected
         val keys = buildList {
             add("desktop")
             add("terminal")
+            add("network")
+            add("status")
             if (s.isHomeApp) add("android-apps")
             add("setup"); add("updates")
         }
@@ -129,6 +133,8 @@ internal fun SideRail(
             }
             RailItem(stringResource(R.string.rail_desktop), Icons.Outlined.DesktopWindows, "desktop", shown == "desktop", compact, iconOnly, fit, place = place, onFocus = { onFocusSelect("desktop") }) { onSelect("desktop") }
             RailItem(stringResource(R.string.rail_terminal), Icons.Outlined.Terminal, "terminal", shown == "terminal", compact, iconOnly, fit, place = place, onFocus = { onFocusSelect("terminal") }) { onSelect("terminal") }
+            RailItem(stringResource(R.string.rail_network), Icons.Outlined.Lan, "network", shown == "network", compact, iconOnly, fit, place = place, onFocus = { onFocusSelect("network") }) { onSelect("network") }
+            RailItem(stringResource(R.string.rail_status), Icons.Outlined.Speed, "status", shown == "status", compact, iconOnly, fit, place = place, onFocus = { onFocusSelect("status") }) { onSelect("status") }
             if (s.isHomeApp) RailItem(stringResource(R.string.rail_apps), Icons.Outlined.Apps, "android-apps", shown == "android-apps", compact, iconOnly, fit, place = place, onFocus = { onFocusSelect("android-apps") }) { onSelect("android-apps") }
             RailItem(stringResource(R.string.rail_setup), Icons.Outlined.Tune, "setup", shown == "setup", compact, iconOnly, fit, badge = setupNeedsAttention, place = place, onFocus = { onFocusSelect("setup") }) { onSelect("setup") }
             RailItem(stringResource(R.string.rail_updates), Icons.Outlined.SystemUpdate, "updates", shown == "updates", compact, iconOnly, fit, badge = s.updates.hasUpdate, place = place, onFocus = { onFocusSelect("updates") }) { onSelect("updates") }

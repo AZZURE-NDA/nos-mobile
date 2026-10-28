@@ -18,9 +18,7 @@ import android.view.inputmethod.InputMethodManager
 import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.TextView
-import com.droiddeck.launcher.runtime.GuestCommand
 import com.droiddeck.launcher.runtime.LinuxRuntime
-import com.droiddeck.launcher.session.OrphanReaper
 import com.termux.terminal.TerminalColors
 import com.termux.terminal.TerminalEmulator
 import com.termux.terminal.TerminalSession
@@ -29,47 +27,45 @@ import com.termux.view.TerminalView
 import com.termux.view.TerminalViewClient
 import java.io.File
 import java.util.Properties
-import kotlin.concurrent.thread
 
-/** An Ubuntu shell on its own, without starting the desktop. */
+/** Ubuntu shells in tabs, without starting the desktop. The shells live in [TerminalSessions]. */
 class TerminalActivity : Activity() {
-    private var session: TerminalSession? = null
     private var view: TerminalView? = null
-    private var shellPid = -1
+    private var current: TerminalTab? = null
+    private var tabStrip: LinearLayout? = null
     private var ctrl = false
     private var alt = false
     private var ctrlKey: TextView? = null
     private var altKey: TextView? = null
     private var fontPx = 0
+    private val client = Client()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        TerminalSessions.appContext = applicationContext
         window.statusBarColor = BAR
         window.navigationBarColor = BG
-        val root = intent.getBooleanExtra(EXTRA_ROOT, false)
         fontPx = dp(15)
 
         val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(BG) }
         val bar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(10), dp(6), dp(10), dp(6))
+            setPadding(dp(8), dp(6), dp(8), dp(6))
             setBackgroundColor(BAR)
         }
-        bar.addView(pill(getString(R.string.terminal_close)) { finish() })
-        bar.addView(TextView(this).apply {
-            text = getString(if (root) R.string.terminal_title_root else R.string.terminal_title)
-            textSize = 15f
-            setTextColor(FG)
-            typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
-            setPadding(dp(14), 0, 0, 0)
-        }, LinearLayout.LayoutParams(0, -2, 1f))
+        bar.addView(pill("‹") { finish() })
+        val tabsScroll = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false }
+        tabStrip = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(dp(6), 0, dp(6), 0) }
+        tabsScroll.addView(tabStrip)
+        bar.addView(tabsScroll, LinearLayout.LayoutParams(0, -2, 1f))
+        bar.addView(pill("+") { openTab(false) })
+        bar.addView(pill("+ #") { openTab(true) })
         bar.addView(pill("A−") { zoom(-1) })
         bar.addView(pill("A+") { zoom(1) })
-        bar.addView(pill(getString(R.string.terminal_keyboard)) { showKeyboard() })
+        bar.addView(pill("⌨") { showKeyboard() })
         column.addView(bar, LinearLayout.LayoutParams(-1, -2))
 
-        val client = Client()
         val terminal = TerminalView(this, null).apply {
             setTerminalViewClient(client)
             setTextSize(fontPx)
@@ -94,39 +90,97 @@ class TerminalActivity : Activity() {
             return
         }
         applyColors()
-        thread(name = "terminal-start") {
-            val prepared = runCatching { GuestCommand.shell(applicationContext, root) }
-                .onFailure { Log.e(TAG, "could not prepare the shell", it) }.getOrNull()
-            runOnUiThread {
-                if (isFinishing || isDestroyed || prepared == null) return@runOnUiThread
-                val (command, hostEnv) = prepared
-                val env = LinkedHashMap(System.getenv()).apply { putAll(hostEnv) }.map { (k, v) -> "$k=$v" }.toTypedArray()
-                val started = TerminalSession(command.first(), LinuxRuntime.rootDir(this).path, command.toTypedArray(), env, TRANSCRIPT_ROWS, client)
-                started.mSessionName = "N-OS terminal"
-                session = started
-                terminal.attachSession(started)
-                terminal.post { trackPid(); terminal.requestFocus(); showKeyboard() }
+        handle(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handle(intent)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        TerminalSessions.client = client
+        TerminalSessions.onChanged = { runOnUiThread { renderTabs() } }
+        renderTabs()
+    }
+
+    override fun onStop() {
+        if (TerminalSessions.client === client) TerminalSessions.client = null
+        TerminalSessions.onChanged = null
+        super.onStop()
+    }
+
+    private fun handle(intent: Intent?) {
+        val root = intent?.getBooleanExtra(EXTRA_ROOT, false) ?: false
+        val wantNew = intent?.getBooleanExtra(EXTRA_NEW, false) ?: false
+        val command = intent?.getStringExtra(EXTRA_COMMAND)
+        val existing = TerminalSessions.tabs.lastOrNull { it.root == root }
+        if (!wantNew && command == null && existing != null) show(existing)
+        else if (!wantNew && command == null && TerminalSessions.tabs.isNotEmpty()) show(TerminalSessions.tabs.last())
+        else openTab(root, command)
+    }
+
+    private fun openTab(root: Boolean, command: String? = null) {
+        TerminalSessions.open(this, root) { tab ->
+            if (tab == null || isDestroyed) return@open
+            show(tab)
+            if (command != null) tab.session.write(command + "\r")
+        }
+    }
+
+    private fun show(tab: TerminalTab) {
+        val terminal = view ?: return
+        current = tab
+        terminal.attachSession(tab.session)
+        renderTabs()
+        terminal.post {
+            TerminalSessions.track(tab)
+            terminal.onScreenUpdated()
+            terminal.requestFocus()
+            showKeyboard()
+        }
+    }
+
+    private fun renderTabs() {
+        val strip = tabStrip ?: return
+        strip.removeAllViews()
+        TerminalSessions.tabs.forEachIndexed { i, tab ->
+            val selected = tab === current
+            val label = (if (tab.root) "# " else "") + (i + 1) + "  " + tab.title.take(18)
+            val chip = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                background = GradientDrawable().apply { cornerRadius = dp(10).toFloat(); setColor(if (selected) ACCENT_SOFT else KEY) }
+                setPadding(dp(12), dp(6), dp(4), dp(6))
+                layoutParams = LinearLayout.LayoutParams(-2, -2).apply { marginEnd = dp(6) }
+                setOnClickListener { show(tab) }
             }
+            chip.addView(TextView(this).apply {
+                text = label
+                textSize = 13f
+                setTextColor(if (selected) Color.WHITE else FG_DIM)
+                typeface = Typeface.create("sans-serif-medium", Typeface.NORMAL)
+            })
+            chip.addView(TextView(this).apply {
+                text = "×"
+                textSize = 15f
+                setTextColor(FG_DIM)
+                setPadding(dp(10), 0, dp(8), 0)
+                setOnClickListener { closeTab(tab) }
+            })
+            strip.addView(chip)
         }
+        if (current != null && current !in TerminalSessions.tabs) current = null
     }
 
-    override fun onDestroy() {
-        val pid = shellPid.takeIf { it > 1 } ?: (session?.pid ?: -1)
-        if (pid > 1) {
-            OrphanReaper.release(pid)
-            OrphanReaper.killTree(pid)
-        }
-        session = null
-        view = null
-        super.onDestroy()
-    }
-
-    private fun trackPid() {
-        val pid = session?.pid ?: -1
-        if (pid > 1 && pid != shellPid) {
-            shellPid = pid
-            OrphanReaper.keep(pid)
-        }
+    private fun closeTab(tab: TerminalTab) {
+        val wasCurrent = tab === current
+        TerminalSessions.close(this, tab)
+        if (wasCurrent) {
+            val next = TerminalSessions.tabs.lastOrNull()
+            if (next != null) show(next) else finish()
+        } else renderTabs()
     }
 
     private fun zoom(step: Int) {
@@ -143,7 +197,7 @@ class TerminalActivity : Activity() {
     private fun keyStrip(): View {
         val strip = HorizontalScrollView(this).apply { isHorizontalScrollBarEnabled = false; setBackgroundColor(BAR) }
         val keys = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; setPadding(dp(6), dp(5), dp(6), dp(5)) }
-        fun send(label: String, input: String) = keys.addView(pill(label) { session?.write(input) })
+        fun send(label: String, input: String) = keys.addView(pill(label) { current?.session?.write(input) })
         send("Esc", "\u001b")
         send("Tab", "\t")
         ctrlKey = pill("Ctrl") { ctrl = !ctrl; latch() }.also { keys.addView(it) }
@@ -154,6 +208,8 @@ class TerminalActivity : Activity() {
         send("→", "\u001b[C")
         send("Home", "\u001b[H")
         send("End", "\u001b[F")
+        send("PgUp", "\u001b[5~")
+        send("PgDn", "\u001b[6~")
         send("|", "|")
         send("~", "~")
         send("/", "/")
@@ -172,7 +228,7 @@ class TerminalActivity : Activity() {
 
     private fun paste() {
         val clip = (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip
-        if (clip != null && clip.itemCount > 0) session?.write(clip.getItemAt(0).coerceToText(this).toString())
+        if (clip != null && clip.itemCount > 0) current?.session?.write(clip.getItemAt(0).coerceToText(this).toString())
     }
 
     private fun pill(label: String, onClick: () -> Unit) = TextView(this).apply {
@@ -180,8 +236,8 @@ class TerminalActivity : Activity() {
         textSize = 14f
         setTextColor(FG)
         gravity = Gravity.CENTER
-        minWidth = dp(44)
-        setPadding(dp(12), dp(8), dp(12), dp(8))
+        minWidth = dp(40)
+        setPadding(dp(11), dp(7), dp(11), dp(7))
         background = GradientDrawable().apply { cornerRadius = dp(10).toFloat(); setColor(KEY) }
         isClickable = true
         setOnClickListener { onClick() }
@@ -205,12 +261,20 @@ class TerminalActivity : Activity() {
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density + 0.5f).toInt()
 
     private inner class Client : TerminalSessionClient, TerminalViewClient {
-        override fun onTextChanged(changedSession: TerminalSession) { view?.onScreenUpdated() }
-        override fun onTitleChanged(changedSession: TerminalSession) = Unit
+        override fun onTextChanged(changedSession: TerminalSession) {
+            if (changedSession === current?.session) view?.onScreenUpdated()
+        }
+        override fun onTitleChanged(changedSession: TerminalSession) {
+            val tab = TerminalSessions.tabs.firstOrNull { it.session === changedSession } ?: return
+            changedSession.title?.takeIf { it.isNotBlank() }?.let { tab.title = it; renderTabs() }
+        }
         override fun onSessionFinished(finishedSession: TerminalSession) {
-            if (shellPid > 1) OrphanReaper.release(shellPid)
-            shellPid = -1
-            if (!isFinishing) finish()
+            val wasCurrent = finishedSession === current?.session
+            TerminalSessions.finished(this@TerminalActivity, finishedSession)
+            if (wasCurrent) {
+                val next = TerminalSessions.tabs.lastOrNull()
+                if (next != null) show(next) else if (!isFinishing) finish()
+            }
         }
         override fun onCopyTextToClipboard(session: TerminalSession, text: String) {
             (getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Terminal", text))
@@ -246,25 +310,38 @@ class TerminalActivity : Activity() {
         override fun readShiftKey(): Boolean = false
         override fun readFnKey(): Boolean = false
         override fun onCodePoint(codePoint: Int, ctrlDown: Boolean, session: TerminalSession): Boolean = false
-        override fun onEmulatorSet() { view?.onScreenUpdated(); trackPid() }
+        override fun onEmulatorSet() {
+            view?.onScreenUpdated()
+            current?.let { TerminalSessions.track(it) }
+        }
     }
 
     companion object {
-        private const val TAG = "TerminalActivity"
         const val EXTRA_ROOT = "root"
-        private const val TRANSCRIPT_ROWS = 5000
+        const val EXTRA_NEW = "new"
+        const val EXTRA_COMMAND = "command"
         private val BG = Color.rgb(21, 25, 33)
         private val BAR = Color.rgb(27, 32, 42)
         private val KEY = Color.rgb(42, 48, 60)
         private val FG = Color.rgb(224, 229, 238)
+        private val FG_DIM = Color.rgb(160, 168, 182)
         private val ACCENT = Color.rgb(52, 120, 246)
+        private val ACCENT_SOFT = Color.rgb(38, 72, 140)
         private val PALETTE = listOf(
             "#2A303C", "#FF5F57", "#28C840", "#FEBC2E", "#3478F6", "#B07CF0", "#1E9BFF", "#C8CED8",
             "#5C6576", "#FF827A", "#6EE27C", "#FFD46E", "#6EA0FF", "#CCA4FF", "#6EC4FF", "#FFFFFF",
         )
 
+        /** Opens the terminal on an existing shell of that kind, or a new one. */
         fun open(context: Context, root: Boolean) {
             context.startActivity(Intent(context, TerminalActivity::class.java).putExtra(EXTRA_ROOT, root))
+        }
+
+        /** Opens a new shell and types [command] into it. */
+        fun run(context: Context, command: String, root: Boolean = false) {
+            context.startActivity(
+                Intent(context, TerminalActivity::class.java).putExtra(EXTRA_ROOT, root).putExtra(EXTRA_COMMAND, command),
+            )
         }
     }
 }

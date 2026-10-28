@@ -169,6 +169,7 @@
         <activity
             android:name=".TerminalActivity"
             android:exported="false"
+            android:launchMode="singleTask"
             android:theme="@android:style/Theme.Material.NoActionBar"
             android:windowSoftInputMode="adjustResize|stateVisible"
             android:resizeableActivity="true"
@@ -195,6 +196,10 @@
             android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density"
             android:theme="@style/SessionTheme" />
 
+        <service
+            android:name=".TerminalService"
+            android:exported="false"
+            android:stopWithTask="false" />
         <service
             android:name=".session.SessionService"
             android:exported="false"
