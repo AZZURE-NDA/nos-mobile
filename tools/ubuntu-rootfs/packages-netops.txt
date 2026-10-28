@@ -2,6 +2,7 @@
 net-tools iproute2 iputils-ping iputils-tracepath traceroute mtr-tiny nmap iperf3
 dnsutils whois telnet netcat-openbsd socat curl wget ethtool ipcalc tcpdump
 openssh-client sshpass snmp git vim tmux htop jq python3-pip python3-venv
+openconnect ocproxy wireguard-tools openvpn lsof rsync zip ripgrep
 
 # Ubuntu look on KDE
 fonts-ubuntu yaru-theme-icon yaru-theme-gtk

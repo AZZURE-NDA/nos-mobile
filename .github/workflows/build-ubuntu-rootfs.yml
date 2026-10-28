@@ -10,7 +10,7 @@ on:
       version:
         description: 'Runtime version written to /.version'
         required: false
-        default: 'nos-ubuntu-26.04-r4'
+        default: 'nos-ubuntu-26.04-r5'
 
 permissions:
   contents: read
@@ -23,14 +23,15 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build the arm64 image
         env:
-          RUNTIME_VERSION: ${{ inputs.version || 'nos-ubuntu-26.04-r4' }}
+          RUNTIME_VERSION: ${{ inputs.version || 'nos-ubuntu-26.04-r5' }}
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq zstd >/dev/null
           bash tools/ubuntu-rootfs/build.sh "$PWD/out"
-      - name: Check the image has KDE and no GNOME
+      - name: Check the image has KDE, Claude Code and the network tools, and no GNOME
         run: |
           list=$(tar --zstd -tf out/linuxfs-ubuntu.tar.zst)
-          for f in usr/bin/startplasma-wayland usr/bin/kwin_wayland usr/bin/konsole usr/lib/aarch64-linux-gnu/qt6/plugins/org.kde.kdecoration3/org.kde.kwin.aurorae.so; do
+          for f in usr/bin/startplasma-wayland usr/bin/kwin_wayland usr/bin/konsole usr/lib/aarch64-linux-gnu/qt6/plugins/org.kde.kdecoration3/org.kde.kwin.aurorae.so \
+                   usr/local/bin/claude usr/sbin/openconnect usr/bin/ocproxy usr/bin/mtr usr/bin/nmap; do
             grep -qxF -e "./$f" -e "$f" <<<"$list" || { echo "missing: $f"; exit 1; }
           done
           if grep -qxF -e "./usr/bin/gnome-shell" -e "usr/bin/gnome-shell" <<<"$list"; then echo "gnome-shell is in the image"; exit 1; fi

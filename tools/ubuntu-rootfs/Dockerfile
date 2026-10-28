@@ -2,7 +2,7 @@
 FROM --platform=linux/arm64 ubuntu:26.04
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG RUNTIME_VERSION=nos-ubuntu-26.04-r4
+ARG RUNTIME_VERSION=nos-ubuntu-26.04-r5
 ARG DESKTOP_TAG=desktop-kde-r2
 
 # Snaps need systemd, which a proot session does not have.
@@ -32,6 +32,11 @@ COPY packages-netops.txt /tmp/packages-netops.txt
 RUN apt-get update \
  && apt-get install -y $(grep -v '^\s*#' /tmp/packages-netops.txt | xargs) \
  && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/packages-netops.txt
+
+# Claude Code's native build, linked onto the PATH every shell and the desktop use.
+RUN curl -fsSL https://claude.ai/install.sh | bash \
+ && ln -sf /root/.local/bin/claude /usr/local/bin/claude \
+ && /usr/local/bin/claude --version
 
 COPY files/ /
 RUN chmod 0755 /opt/android-host/proot /opt/android-host/loader \
