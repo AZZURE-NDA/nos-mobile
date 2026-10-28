@@ -1,0 +1,21 @@
+name: tmp cleanup1
+on:
+  push:
+    branches: [ tmp/cleanup1 ]
+    paths: [ '.github/workflows/tmp-cleanup1.yml' ]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p handoff
+          bash run.sh > handoff/out.txt 2>&1 || echo "run.sh exited $?" >> handoff/out.txt
+          git config user.name github-actions && git config user.email github-actions@users.noreply.github.com
+          git add handoff && git commit -qm "probe output" && git push -q origin HEAD:tmp/cleanup1
