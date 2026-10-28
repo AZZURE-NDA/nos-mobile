@@ -1,0 +1,10 @@
+deleted tmp/buildlog1
+deleted tmp/proot-probe1
+deleted tmp/proot-probe3
+deleted tmp/proot-probe4
+deleted tmp/proot-probe5
+deleted tmp/proot-probe6
+deleted tmp/proot-probe7
+deleted tmp/proot-probe8
+deleted tmp/r14-log
+deleted tmp/rt5-release
