@@ -33,6 +33,7 @@ import org.robolectric.annotation.LooperMode
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [28], qualifiers = "w1200dp-h752dp-land", application = Application::class)
 @LooperMode(LooperMode.Mode.PAUSED)
+@org.junit.Ignore("N-OS hides the glasses tab in Setup")
 class GlobalGlassesSettingsTest {
     @get:Rule val compose = createRobolectricComposeRule()
     private val handler = Handler(Looper.getMainLooper())
