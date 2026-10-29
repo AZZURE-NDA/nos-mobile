@@ -24,7 +24,7 @@ class SessionBackgroundPrefsTest {
                 SessionPrefs.SUSPEND_NATIVE)) {
             SessionPrefs.setSuspendPolicy(context, "steam", policy)
             assertEquals(policy, SessionPrefs.suspendPolicy(context, "steam"))
-            assertEquals(SessionPrefs.SUSPEND_MANUAL, SessionPrefs.suspendPolicy(context, "desktop"))
+            assertEquals(SessionPrefs.SUSPEND_NEVER, SessionPrefs.suspendPolicy(context, "desktop"))
         }
     }
 

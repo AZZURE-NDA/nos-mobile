@@ -1007,7 +1007,8 @@ object SessionPrefs {
     }
 
     fun suspendPolicy(context: Context, mode: String): String =
-        prefs(context).getString("suspendPolicy.${prefMode(mode)}", SUSPEND_MANUAL)
+        // The N-OS desktop is a workspace that keeps running, like a VPN or a build, while another app is in front.
+        prefs(context).getString("suspendPolicy.${prefMode(mode)}", if (mode == SessionService.MODE_DESKTOP) SUSPEND_NEVER else SUSPEND_MANUAL)
             ?.let { if (it == LEGACY_SUSPEND_DOWNLOADS) SUSPEND_AUTO else it }
             ?.takeIf { it in setOf(SUSPEND_AUTO, SUSPEND_NATIVE, SUSPEND_MANUAL, SUSPEND_NEVER) }
             ?.let { if (mode != SessionService.MODE_STEAM && it == SUSPEND_NATIVE) SUSPEND_AUTO else it }
