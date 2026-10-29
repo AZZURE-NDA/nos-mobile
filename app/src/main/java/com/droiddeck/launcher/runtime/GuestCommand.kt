@@ -28,7 +28,10 @@ object GuestCommand {
     /** The proot command and host environment for an interactive shell in the guest, for a terminal view's own PTY. */
     fun shell(context: Context, fakeRoot: Boolean): Pair<List<String>, Map<String, String>> {
         // The fast path is tuned for the desktop session's binds; a terminal shell stays on proot's traced path.
-        val (cmd, env) = prepare(context, fakeRoot, null, null, fastPath = false,
+        // Android denies apps hard links, and dpkg hard-links its status file before every change;
+        // link2symlink stands in for them in the root shells.
+        val links = if (fakeRoot) File(LinuxRuntime.rootDir(context), ".l2s").apply { mkdirs() } else null
+        val (cmd, env) = prepare(context, fakeRoot, links, null, fastPath = false,
             guestEnv = listOf("TERM=xterm-256color", "COLORTERM=truecolor", "SHELL=/bin/bash", "N_OS_TERMINAL=1"))
         cmd += listOf("/bin/bash", "-l")
         return cmd to env
