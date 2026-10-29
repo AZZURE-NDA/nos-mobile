@@ -11,6 +11,12 @@ object OrphanReaper {
 
     fun release(pid: Int) { kept.remove(pid) }
 
+    /** The kept processes and everything they started: the Terminal's shells, a VPN running in one. */
+    fun spared(): Set<Int> {
+        com.droiddeck.launcher.TerminalSessions.trackAll()
+        return descendants(kept)
+    }
+
     /** Kills a process and everything it started, children first. */
     fun killTree(pid: Int) {
         if (pid <= 1) return
@@ -22,7 +28,7 @@ object OrphanReaper {
     fun reap(reason: String): Int {
         val me = android.os.Process.myPid()
         val uid = android.os.Process.myUid()
-        val spared = descendants(kept)
+        val spared = spared()
         var killed = 0
         File("/proc").listFiles()?.forEach { entry ->
             val pid = entry.name.toIntOrNull() ?: return@forEach

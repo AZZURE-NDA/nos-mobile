@@ -64,6 +64,8 @@ object TerminalSessions {
         if (tab.pid > 1) OrphanReaper.keep(tab.pid)
     }
 
+    fun trackAll() { runCatching { tabs.toList() }.getOrDefault(emptyList()).forEach { track(it) } }
+
     fun close(context: Context, tab: TerminalTab) {
         val pid = tab.pid
         tabs.remove(tab)
