@@ -444,7 +444,7 @@ object SessionPrefs {
         prefs(context).edit().putBoolean("prootFastPath", on).apply()
     }
 
-    const val DEFAULT_GUEST_HOSTNAME = "DroidDeck"
+    const val DEFAULT_GUEST_HOSTNAME = "N-OS"
 
     @JvmStatic
     fun guestHostname(context: Context): String =
