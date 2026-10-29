@@ -1,0 +1,21 @@
+name: tmp r18b apk handoff
+on:
+  push:
+    branches: [ tmp/r18b-apk ]
+    paths: [ '.github/workflows/tmp-r18b-apk.yml' ]
+permissions:
+  contents: write
+  actions: read
+jobs:
+  copy:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          gh run download 40890608473 -R "$GITHUB_REPOSITORY" -n droiddeck-apk -D out
+          mkdir -p handoff && mv out/*.apk handoff/app-release.apk
+          git config user.name github-actions && git config user.email github-actions@users.noreply.github.com
+          git add handoff && git commit -qm "apk handoff" && git push -q origin HEAD:tmp/r18b-apk
