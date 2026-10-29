@@ -1,0 +1,9 @@
+Compile and test APK	Unit tests	2026-10-29T14:18:27.6405149Z ProtonDefaultTest > missingPerGameProtonIdentityRemainsStoredButUnresolved STANDARD_ERROR
+Compile and test APK	Unit tests	2026-10-29T14:18:28.8402131Z SessionBackgroundPrefsTest > nativeIsOptInAndDoesNotChangeDesktopOrExistingPolicies FAILED
+Compile and test APK	Unit tests	2026-10-29T14:19:11.7428078Z > Task :app:testReleaseUnitTest FAILED
+Compile and test APK	Unit tests	2026-10-29T14:19:11.7481696Z * What went wrong:
+Compile and test APK	Unit tests	2026-10-29T14:19:11.7482126Z Execution failed for task ':app:testReleaseUnitTest'.
+Compile and test APK	Unit tests	2026-10-29T14:19:11.7485764Z org.gradle.api.tasks.TaskExecutionException: Execution failed for task ':app:testReleaseUnitTest'.
+Compile and test APK	Unit tests	2026-10-29T14:19:11.7772894Z BUILD FAILED in 2m 23s
+----
+50530
