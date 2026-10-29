@@ -72,9 +72,9 @@ if [ -f "$HOME/.droiddeck-remote-run" ]; then
     done
   ) &
 fi
-# ~/.config/nos-desktop-gpu (written by the app's Status page) or the image marker turns on GPU drawing.
-gpu_mode=$(head -n1 "$HOME/.config/nos-desktop-gpu" 2>/dev/null)
-[ -n "$gpu_mode" ] || { [ "$(cat /usr/share/droiddeck/kwin-compositor 2>/dev/null)" = opengl ] && gpu_mode=on; }
+# GPU drawing (KWin on Zink) showed only a black screen on the Pad, so only the image marker turns it on.
+gpu_mode=
+[ "$(cat /usr/share/droiddeck/kwin-compositor 2>/dev/null)" = opengl ] && gpu_mode=on
 use_gpu() {
   unset LIBGL_ALWAYS_SOFTWARE QT_QUICK_BACKEND
   export KWIN_COMPOSE=O2 MESA_LOADER_DRIVER_OVERRIDE=zink GALLIUM_DRIVER=zink LIBGL_KOPPER_DRI2=true

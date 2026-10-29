@@ -215,7 +215,6 @@ internal fun StatusPage(s: FrontEndState, a: FrontEndActions, modifier: Modifier
                 }
             }
         }
-        Rise(4) { GpuCard() }
         Rise(5) {
             StatusCard(Modifier.padding(top = 14.dp)) {
                 Text(stringResource(R.string.status_programs), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = colors.onBackground)

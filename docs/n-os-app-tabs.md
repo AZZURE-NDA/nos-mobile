@@ -29,7 +29,7 @@ The side rail: **Desktop**, **Terminal**, **Network**, **Status**, Apps (only as
   every two seconds; device memory from `ActivityManager`; the Linux system's size from a walk of the
   rootfs.
 - Stop desktop, close shells, or stop everything (both, then the leftover-process reaper).
-- Desktop drawing: CPU (default) or GPU. GPU writes `~/.config/nos-desktop-gpu` = `on`;
+- Desktop drawing switch: withdrawn after GPU drawing showed only a black screen on the Pad; the code (GpuCard) stays for later. It wrote `~/.config/nos-desktop-gpu` = `on`;
   `droiddeck-desktop` then runs KWin on Zink (`KWIN_COMPOSE=O2`). If Plasma exits within 20 s it
   writes `~/.config/nos-desktop-gpu-failed` and starts once more on the CPU.
 
