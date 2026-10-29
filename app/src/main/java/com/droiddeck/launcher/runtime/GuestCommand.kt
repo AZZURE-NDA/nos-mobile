@@ -27,7 +27,8 @@ object GuestCommand {
 
     /** The proot command and host environment for an interactive shell in the guest, for a terminal view's own PTY. */
     fun shell(context: Context, fakeRoot: Boolean): Pair<List<String>, Map<String, String>> {
-        val (cmd, env) = prepare(context, fakeRoot, null, null, fastPath = !fakeRoot,
+        // The fast path is tuned for the desktop session's binds; a terminal shell stays on proot's traced path.
+        val (cmd, env) = prepare(context, fakeRoot, null, null, fastPath = false,
             guestEnv = listOf("TERM=xterm-256color", "COLORTERM=truecolor", "SHELL=/bin/bash", "N_OS_TERMINAL=1"))
         cmd += listOf("/bin/bash", "-l")
         return cmd to env
