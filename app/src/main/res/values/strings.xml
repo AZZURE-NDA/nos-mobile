@@ -1191,6 +1191,16 @@
     <string name="net_lead">Reach your network from the Pad: a VPN that needs no root, quick checks, and your saved SSH targets. Everything opens in the Terminal.</string>
     <string name="net_vpn_title">VPN</string>
     <string name="net_vpn_up">Connected · SOCKS 127.0.0.1:%1$d</string>
+    <string name="net_vpn_up_full">Connected · %1$s</string>
+    <string name="net_vpn_mode">Mode</string>
+    <string name="net_vpn_mode_full">Full VPN</string>
+    <string name="net_vpn_mode_proxy">Proxy only</string>
+    <string name="net_vpn_hint_full">openconnect asks for your password and second factor in the terminal. The tunnel becomes an Android VPN, so ping, traceroute, mtr, ssh and other apps on the tablet reach the VPN\'s networks directly. Android asks once to allow N-OS to set up a VPN. Keep the terminal tab open while connected.</string>
+    <string name="vpn_channel">VPN</string>
+    <string name="vpn_title">N-OS VPN</string>
+    <string name="vpn_waiting">Waiting for openconnect</string>
+    <string name="vpn_connected">Connected as %1$s</string>
+    <string name="vpn_stop">Disconnect</string>
     <string name="net_vpn_down">Not connected</string>
     <string name="net_vpn_server">Server</string>
     <string name="net_vpn_user">User name</string>

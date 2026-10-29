@@ -60,7 +60,8 @@ import java.net.Socket
 /** A saved SSH target. [jump] is `user@host:port` (user and port optional). */
 internal data class SshHost(val name: String, val host: String, val port: Int, val user: String, val jump: String, val viaVpn: Boolean)
 
-internal data class VpnProfile(val server: String, val user: String, val protocol: String)
+/** [full]: an Android VPN interface (ping, traceroute, every app); otherwise a SOCKS proxy only. */
+internal data class VpnProfile(val server: String, val user: String, val protocol: String, val full: Boolean = true)
 
 /** Saved network settings, and the guest-side files and commands built from them. */
 internal object NetworkStore {
@@ -90,26 +91,35 @@ internal object NetworkStore {
 
     fun vpn(context: Context): VpnProfile {
         val p = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        return VpnProfile(p.getString("vpn_server", "") ?: "", p.getString("vpn_user", "") ?: "", p.getString("vpn_protocol", "anyconnect") ?: "anyconnect")
+        return VpnProfile(p.getString("vpn_server", "") ?: "", p.getString("vpn_user", "") ?: "", p.getString("vpn_protocol", "anyconnect") ?: "anyconnect",
+            p.getBoolean("vpn_full", true))
     }
 
     fun saveVpn(context: Context, vpn: VpnProfile) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit()
-            .putString("vpn_server", vpn.server).putString("vpn_user", vpn.user).putString("vpn_protocol", vpn.protocol).apply()
+            .putString("vpn_server", vpn.server).putString("vpn_user", vpn.user).putString("vpn_protocol", vpn.protocol)
+            .putBoolean("vpn_full", vpn.full).apply()
+        runCatching { writeSshConfig(context, hosts(context)) }
     }
 
     fun alias(h: SshHost) = "nos-" + h.name.lowercase().replace(Regex("[^a-z0-9._-]+"), "-").trim('-').ifEmpty { "host" }
 
-    /** openconnect in user space: ocproxy turns the tunnel into a SOCKS5 proxy, so no tun device or root is needed. */
+    /**
+     * openconnect in user space. Full: nos-vpn-bridge carries the packets to the app's Android VPN interface.
+     * Proxy: ocproxy turns the tunnel into a SOCKS5 proxy. Neither needs a tun device or root in Linux.
+     */
     fun vpnCommand(v: VpnProfile): String {
-        val parts = mutableListOf("openconnect", "--script-tun", "--script", sq("ocproxy -D $SOCKS_PORT -k 30"))
+        val handler = if (v.full) "/usr/local/bin/nos-vpn-bridge" else "ocproxy -D $SOCKS_PORT -k 30"
+        val parts = mutableListOf("openconnect", "--script-tun", "--script", sq(handler))
         if (v.protocol.isNotBlank() && v.protocol != "anyconnect") parts += "--protocol=" + sq(v.protocol)
         if (v.user.isNotBlank()) parts += "--user=" + sq(v.user)
         parts += sq(v.server)
         return parts.joinToString(" ")
     }
 
-    fun vpnUp(): Boolean = runCatching {
+    fun vpnUp(): Boolean = com.droiddeck.launcher.NosVpnService.state.up || socksUp()
+
+    private fun socksUp(): Boolean = runCatching {
         Socket().use { it.connect(InetSocketAddress("127.0.0.1", SOCKS_PORT), 300); true }
     }.getOrDefault(false)
 
@@ -124,6 +134,8 @@ internal object NetworkStore {
         ssh.setReadable(false, false); ssh.setReadable(true, true)
         ssh.setExecutable(false, false); ssh.setExecutable(true, true)
         ssh.setWritable(false, false); ssh.setWritable(true, true)
+        // A full VPN routes for every program, so only proxy mode needs ssh pointed at the SOCKS port.
+        val viaProxy = !vpn(context).full
         val proxy = "ProxyCommand nc -X 5 -x 127.0.0.1:$SOCKS_PORT %h %p"
         val out = StringBuilder("# Written by N-OS from the Network tab; edits here are replaced.\n")
         for (h in hosts) {
@@ -131,7 +143,7 @@ internal object NetworkStore {
             out.append("\nHost $alias\n  HostName ${h.host}\n  Port ${h.port}\n")
             if (h.user.isNotBlank()) out.append("  User ${h.user}\n")
             out.append("  ServerAliveInterval 30\n")
-            if (h.jump.isNotBlank()) out.append("  ProxyJump $alias-jump\n") else if (h.viaVpn) out.append("  $proxy\n")
+            if (h.jump.isNotBlank()) out.append("  ProxyJump $alias-jump\n") else if (h.viaVpn && viaProxy) out.append("  $proxy\n")
             if (h.jump.isNotBlank()) {
                 val user = h.jump.substringBefore('@', "")
                 val rest = h.jump.substringAfter('@')
@@ -140,7 +152,7 @@ internal object NetworkStore {
                 out.append("\nHost $alias-jump\n  HostName $jumpHost\n  Port $jumpPort\n")
                 if (user.isNotBlank()) out.append("  User $user\n")
                 out.append("  ServerAliveInterval 30\n")
-                if (h.viaVpn) out.append("  $proxy\n")
+                if (h.viaVpn && viaProxy) out.append("  $proxy\n")
             }
         }
         val conf = File(dir, "n-os.conf")
@@ -175,6 +187,24 @@ internal fun NetworkPage(s: FrontEndState, modifier: Modifier) {
         }
     }
     fun run(command: String) = TerminalActivity.run(ctx, command)
+    val consent = androidx.activity.compose.rememberLauncherForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult(),
+    ) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            com.droiddeck.launcher.NosVpnService.start(ctx)
+            run(NetworkStore.vpnCommand(vpn))
+        }
+    }
+    fun connect() {
+        NetworkStore.saveVpn(ctx, vpn)
+        if (!vpn.full) { run(NetworkStore.vpnCommand(vpn)); return }
+        val ask = android.net.VpnService.prepare(ctx)
+        if (ask != null) consent.launch(ask)
+        else {
+            com.droiddeck.launcher.NosVpnService.start(ctx)
+            run(NetworkStore.vpnCommand(vpn))
+        }
+    }
 
     Column(modifier.verticalScroll(rememberScrollState())) {
         Rise(0) { PageHeader(stringResource(R.string.net_title)) }
@@ -189,7 +219,11 @@ internal fun NetworkPage(s: FrontEndState, modifier: Modifier) {
                     Text(stringResource(R.string.net_vpn_title), fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = colors.onBackground, modifier = Modifier.weight(1f))
                     StatusDot(vpnUp)
                     Text(
-                        if (vpnUp) stringResource(R.string.net_vpn_up, NetworkStore.SOCKS_PORT) else stringResource(R.string.net_vpn_down),
+                        when {
+                            !vpnUp -> stringResource(R.string.net_vpn_down)
+                            com.droiddeck.launcher.NosVpnService.state.up -> stringResource(R.string.net_vpn_up_full, com.droiddeck.launcher.NosVpnService.state.address)
+                            else -> stringResource(R.string.net_vpn_up, NetworkStore.SOCKS_PORT)
+                        },
                         fontSize = 13.sp, color = colors.onSurfaceVariant,
                     )
                 }
@@ -204,16 +238,21 @@ internal fun NetworkPage(s: FrontEndState, modifier: Modifier) {
                     Text(stringResource(R.string.net_vpn_protocol), fontSize = 12.sp, color = colors.onSurfaceVariant)
                     for (p in NetworkStore.PROTOCOLS) Pick(p, vpn.protocol == p) { vpn = vpn.copy(protocol = p) }
                 }
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(stringResource(R.string.net_vpn_mode), fontSize = 12.sp, color = colors.onSurfaceVariant)
+                    Pick(stringResource(R.string.net_vpn_mode_full), vpn.full) { vpn = vpn.copy(full = true) }
+                    Pick(stringResource(R.string.net_vpn_mode_proxy), !vpn.full) { vpn = vpn.copy(full = false) }
+                }
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     PrimaryButton(stringResource(R.string.net_vpn_connect), enabled = s.ready && vpn.server.isNotBlank() && !vpnUp, compact = true) {
-                        NetworkStore.saveVpn(ctx, vpn)
-                        run(NetworkStore.vpnCommand(vpn))
+                        connect()
                     }
                     SecondaryButton(stringResource(R.string.net_vpn_disconnect), enabled = vpnUp, compact = true) {
                         run("pkill -INT openconnect; echo; echo 'VPN disconnected.'")
+                        com.droiddeck.launcher.NosVpnService.stop(ctx)
                     }
                 }
-                Text(stringResource(R.string.net_vpn_hint, NetworkStore.SOCKS_PORT), fontSize = 12.sp, lineHeight = 17.sp, color = colors.onSurfaceVariant)
+                Text(if (vpn.full) stringResource(R.string.net_vpn_hint_full) else stringResource(R.string.net_vpn_hint, NetworkStore.SOCKS_PORT), fontSize = 12.sp, lineHeight = 17.sp, color = colors.onSurfaceVariant)
             }
         }
 

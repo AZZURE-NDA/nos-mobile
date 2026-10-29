@@ -151,6 +151,7 @@ docker run --rm --platform linux/amd64 \
         put tools/linuxfs/desktop/kwin_wayland_wrapper "$d/usr/local/bin/kwin_wayland_wrapper"
         put tools/linuxfs/desktop/nos-kde-layout "$d/usr/local/bin/nos-kde-layout"
         put tools/linuxfs/desktop/nos-pin "$d/usr/local/bin/nos-pin"
+        put tools/linuxfs/desktop/nos-vpn-bridge "$d/usr/local/bin/nos-vpn-bridge"
         put tools/linuxfs/desktop/firefox-droiddeck.js \
             "$d/usr/lib/firefox/defaults/pref/droiddeck.js"
 

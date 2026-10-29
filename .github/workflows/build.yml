@@ -346,6 +346,7 @@ jobs:
           install -Dm644 tools/linuxfs/desktop/kwin_wayland_wrapper "$D/usr/local/bin/kwin_wayland_wrapper"
           install -Dm644 tools/linuxfs/desktop/nos-kde-layout "$D/usr/local/bin/nos-kde-layout"
           install -Dm644 tools/linuxfs/desktop/nos-pin "$D/usr/local/bin/nos-pin"
+          install -Dm644 tools/linuxfs/desktop/nos-vpn-bridge "$D/usr/local/bin/nos-vpn-bridge"
           install -Dm644 tools/linuxfs/desktop/firefox-droiddeck.js "$D/usr/lib/firefox/defaults/pref/droiddeck.js"
           ls -lR "$D"
 
