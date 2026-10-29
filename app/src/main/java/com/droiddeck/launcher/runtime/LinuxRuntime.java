@@ -409,12 +409,97 @@ public final class LinuxRuntime {
                 + "\\" + host.version + "\\" + host.machine + "\\localdomain\\-1\\";
     }
 
+    /**
+     * The guest's /etc/passwd and /etc/group. The session runs as the app's Android uid, so that uid is
+     * "root" first; uid 0 follows for the fake-root shells (proot -0), and the image's system users stay,
+     * because dpkg refuses to run when a user named in its statoverride file is missing.
+     */
     public static void writeAccounts(Context context) throws IOException {
         File root = rootDir(context);
         int uid = Process.myUid();
-        Files.write(new File(root, "etc/passwd").toPath(),
-                ("root:x:" + uid + ":" + uid + ":N-OS:/root:/bin/bash\n").getBytes(StandardCharsets.UTF_8));
-        Files.write(new File(root, "etc/group").toPath(),
-                ("root:x:" + uid + ":\n").getBytes(StandardCharsets.UTF_8));
+        File etc = new File(root, "etc");
+        File passwd = new File(etc, "passwd");
+        File group = new File(etc, "group");
+        keepImageCopy(passwd, new File(etc, "passwd.n-os-image"));
+        keepImageCopy(group, new File(etc, "group.n-os-image"));
+        List<String> users = systemEntries(new File(etc, "passwd.n-os-image"), new File(root, "usr/share/base-passwd/passwd.master"));
+        List<String> groups = systemEntries(new File(etc, "group.n-os-image"), new File(root, "usr/share/base-passwd/group.master"));
+        java.util.Set<String> userNames = new java.util.HashSet<>();
+        java.util.Set<String> groupNames = new java.util.HashSet<>();
+        java.util.Set<String> usedIds = new java.util.HashSet<>();
+        for (String line : users) { userNames.add(field(line, 0)); usedIds.add(field(line, 2)); }
+        for (String line : groups) { groupNames.add(field(line, 0)); usedIds.add(field(line, 2)); }
+        java.util.Set<String> wanted = new java.util.LinkedHashSet<>(java.util.Arrays.asList(SERVICE_ACCOUNTS));
+        wanted.addAll(statOverrideNames(new File(root, "var/lib/dpkg/statoverride")));
+        int next = 900;
+        for (String name : wanted) {
+            if (userNames.contains(name) && groupNames.contains(name)) continue;
+            while (usedIds.contains(String.valueOf(next))) next++;
+            String id = String.valueOf(next);
+            usedIds.add(id);
+            if (!userNames.contains(name)) { users.add(name + ":x:" + id + ":" + id + "::/nonexistent:/usr/sbin/nologin"); userNames.add(name); }
+            if (!groupNames.contains(name)) { groups.add(name + ":x:" + id + ":"); groupNames.add(name); }
+        }
+        StringBuilder p = new StringBuilder("root:x:" + uid + ":" + uid + ":N-OS:/root:/bin/bash\n");
+        p.append("root:x:0:0:root:/root:/bin/bash\n");
+        for (String line : users) p.append(line).append('\n');
+        StringBuilder g = new StringBuilder("root:x:" + uid + ":\n");
+        g.append("root:x:0:\n");
+        for (String line : groups) g.append(line).append('\n');
+        Files.write(passwd.toPath(), p.toString().getBytes(StandardCharsets.UTF_8));
+        Files.write(group.toPath(), g.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    private static final String[] SERVICE_ACCOUNTS = {
+        "_apt", "messagebus", "systemd-network", "systemd-resolve", "systemd-timesync", "polkitd", "geoclue",
+        "avahi", "colord", "rtkit", "saned", "pipewire", "tss", "dnsmasq", "usbmux", "uuidd", "tcpdump",
+        "_flatpak", "nm-openvpn", "sshd", "syslog", "speech-dispatcher", "fwupd-refresh", "kernoops", "cups-pk-helper",
+    };
+
+    /** Saves the account file the runtime image shipped with, before the first rewrite replaces it. */
+    private static void keepImageCopy(File file, File copy) throws IOException {
+        if (copy.exists() || !file.isFile()) return;
+        List<String> lines = Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+        int entries = 0;
+        for (String line : lines) if (!line.trim().isEmpty()) entries++;
+        // A one-line file is an earlier version's own rewrite, not the image's.
+        if (entries > 1) Files.copy(file.toPath(), copy.toPath());
+    }
+
+    /** Every entry but root's, from the image's copy, or from base-passwd's list when no copy was kept. */
+    private static List<String> systemEntries(File image, File master) throws IOException {
+        File source = image.isFile() ? image : master;
+        List<String> out = new ArrayList<>();
+        if (!source.isFile()) return out;
+        for (String line : Files.readAllLines(source.toPath(), StandardCharsets.UTF_8)) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty() || trimmed.startsWith("#") || trimmed.split(":", -1).length < 3) continue;
+            if (field(trimmed, 0).equals("root")) continue;
+            out.add(trimmed);
+        }
+        return out;
+    }
+
+    private static List<String> statOverrideNames(File file) {
+        List<String> out = new ArrayList<>();
+        try {
+            if (!file.isFile()) return out;
+            for (String line : Files.readAllLines(file.toPath(), StandardCharsets.UTF_8)) {
+                String[] parts = line.trim().split("\\s+");
+                if (parts.length < 2) continue;
+                for (int i = 0; i < 2; i++) {
+                    String name = parts[i].startsWith("#") ? "" : parts[i];
+                    if (!name.isEmpty() && !name.equals("root") && name.matches("[a-z_][a-z0-9_-]*")) out.add(name);
+                }
+            }
+        } catch (IOException e) {
+            return out;
+        }
+        return out;
+    }
+
+    private static String field(String line, int index) {
+        String[] parts = line.split(":", -1);
+        return index < parts.length ? parts[index] : "";
     }
 }
