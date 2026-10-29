@@ -18,13 +18,19 @@ class SessionBackgroundPrefsTest {
         context.getSharedPreferences("session", Context.MODE_PRIVATE).edit().clear().commit()
     }
 
+    @Test fun theDesktopKeepsRunningInTheBackgroundByDefault() {
+        assertEquals(SessionPrefs.SUSPEND_NEVER, SessionPrefs.suspendPolicy(context, SessionService.MODE_DESKTOP))
+        SessionPrefs.setSuspendPolicy(context, SessionService.MODE_DESKTOP, SessionPrefs.SUSPEND_AUTO)
+        assertEquals(SessionPrefs.SUSPEND_AUTO, SessionPrefs.suspendPolicy(context, SessionService.MODE_DESKTOP))
+    }
+
     @Test fun nativeIsOptInAndDoesNotChangeDesktopOrExistingPolicies() {
         assertEquals(SessionPrefs.SUSPEND_MANUAL, SessionPrefs.suspendPolicy(context, "steam"))
         for (policy in listOf(SessionPrefs.SUSPEND_AUTO, SessionPrefs.SUSPEND_MANUAL, SessionPrefs.SUSPEND_NEVER,
                 SessionPrefs.SUSPEND_NATIVE)) {
             SessionPrefs.setSuspendPolicy(context, "steam", policy)
             assertEquals(policy, SessionPrefs.suspendPolicy(context, "steam"))
-            assertEquals(SessionPrefs.SUSPEND_NEVER, SessionPrefs.suspendPolicy(context, "desktop"))
+            assertEquals(SessionPrefs.SUSPEND_MANUAL, SessionPrefs.suspendPolicy(context, "desktop"))
         }
     }
 
